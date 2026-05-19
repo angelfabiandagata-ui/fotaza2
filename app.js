@@ -18,6 +18,9 @@ app.get("/",(req, res , next)=>{
     res.render("index");
 })
 
+app.get("/index",(req, res , next)=>{
+    res.render("index");
+})
 
 // iniciar servidor
 app.listen(PORT, (err) => {

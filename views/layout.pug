@@ -1,0 +1,17 @@
+include mixins/nav.pug 
+
+doctype html
+html
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    //- Aquí usas /styles.css (en la raíz de public)
+    link(rel='stylesheet', href='/styles.css') 
+    block metadata
+
+  body
+    +nav
+    
+    main
+      div(style="padding: 20px")
+        block content
