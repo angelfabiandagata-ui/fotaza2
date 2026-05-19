@@ -1,0 +1,23 @@
+{
+  "name": "fotaza2",
+  "version": "1.0.0",
+  "description": "TPI FOTAZA 2",
+  "homepage": "https://github.com/angelfabiandagata-ui/fotaza2#readme",
+  "bugs": {
+    "url": "https://github.com/angelfabiandagata-ui/fotaza2/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angelfabiandagata-ui/fotaza2.git"
+  },
+  "license": "ISC",
+  "author": "FABIAN D'AGATA",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
