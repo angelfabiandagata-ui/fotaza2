@@ -1,0 +1,43 @@
+extends ../layout.pug 
+
+block content
+  .auth-container
+    .auth-card
+      h2.auth-title Registro
+
+      form#form(action='/auth/signup' method='POST' class="auth-form")
+        
+        .form-group
+          label(for='usuario') Usuario
+          input#usuario(type='text' name='usuario' placeholder="Tu nombre de usuario" required)
+
+        .form-group
+          label(for='email') Email
+          input#email(type='email' name='email' placeholder="ejemplo@gmail.com" required)
+
+        .form-group
+          label(for='contrasenia') Contraseña
+          input#contrasenia(type='password' name='contrasenia' placeholder="Mínimo 8 caracteres" required)
+
+        .form-group
+          label(for='repetir') Repetir contraseña
+          input#repetir(type='password' name='repetir' placeholder="Repite tu contraseña" required)
+
+        .form-options-group
+          .checkbox-item
+            input#tyc(type='checkbox' name='terminos' required)
+            label(for='tyc')
+              | Acepto los 
+              a(href='#') terminos y condiciones
+
+          .checkbox-item
+            input#ofertas(type='checkbox' name='ofertas')
+            label(for='ofertas') Recibir ofertas
+
+        div#mensajes
+
+        input#enviar(type='submit' class="btn-auth" value='Registrarse')
+        
+      .auth-footer
+        p ¿Ya tienes cuenta? 
+          a(href="/auth/login") Inicia sesión aquí

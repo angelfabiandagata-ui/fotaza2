@@ -1,0 +1,21 @@
+extends ../layout.pug
+
+block content
+  .auth-container
+    .auth-card
+      h2.auth-title Iniciar Sesión
+      
+      form(action="/auth/login" method="POST" class="auth-form}")
+        .form-group
+          label(for="email") Email
+          input(type="email" id="email" name="email" placeholder="ejemplo@correo.com" required)
+        
+        .form-group
+          label(for="password") Contraseña
+          input(type="password" id="password" name="password" placeholder="••••••••" required)
+        
+        button(type="submit" class="btn-auth") Ingresar
+      
+      .auth-footer
+        p ¿No tienes cuenta? 
+          a(href="/auth/signup") Regístrate aquí

@@ -22,6 +22,20 @@ app.get("/index",(req, res , next)=>{
     res.render("index");
 })
 
+app.get("/explorar",(req, res , next)=>{
+    res.render("explorar");
+})
+
+app.get("/auth/login", (req, res) => {
+    res.render("auth/login"); 
+});
+
+
+app.get("/auth/signup", (req, res) => {
+    res.render("auth/signup"); 
+});
+
+
 // iniciar servidor
 app.listen(PORT, (err) => {
       if (err) {
