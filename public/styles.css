@@ -1,0 +1,36 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* Estilos para la barra de navegación */
+.navbar-menu {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    list-style: none; 
+    margin: 0;
+    padding: 10px 20px;
+    background-color: #0095f6;
+    justify-content: space-evenly;
+}
+
+.navbar-menu li {
+    display: inline-block; 
+    flex: 0 1 auto;
+    padding: 0 1rem;
+}   
+
+.navbar-menu li a {
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+}
+.navbar-menu li a:hover {
+    text-decoration: underline;
+    color: black;
+}
+
