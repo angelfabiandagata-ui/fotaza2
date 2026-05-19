@@ -34,3 +34,189 @@
     color: black;
 }
 
+/* Estilos para home */
+.home-grid {
+    display: flex;
+    align-items: center; 
+    justify-content: flex-start; 
+    gap: 40px; 
+    margin-top: 40px;
+    width: 100%;
+    padding: 0 40px;
+    box-sizing: border-box;
+}
+
+.container-imagen {
+    display: flex;
+    margin-top: 40px;
+    height: 70vh;
+    width: auto;
+    max-width: 50%;
+    border: solid 5px #262626;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.container-imagen img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.container-texto-home {
+    flex: 1;
+    width: 20%; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}   
+
+.container-texto-home p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 550px; 
+}
+
+/* Estilos para signup y login*/
+
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh; 
+    background-color: #fafafa; 
+    padding: 20px;
+}
+
+.auth-card {
+    background: #ffffff;
+    border: 1px solid #dbdbdb;
+    border-radius: 8px;
+    padding: 40px;
+    width: 100%;
+    max-width: 380px; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); 
+    text-align: center;
+}
+
+/* Título */
+.auth-title {
+    font-size: 1.8rem;
+    color: #262626;
+    margin-bottom: 30px;
+    font-family: sans-serif;
+    font-weight: 600;
+}
+
+/* Formulario login*/
+.auth-form {
+    display: flex;
+    flex-direction: column; 
+    gap: 20px;
+}
+
+/* Bloque etiqueta + input */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    text-align: left; 
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #666666;
+}
+
+
+.form-group input {
+    padding: 10px 12px;
+    border: 1px solid #dbdbdb;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    background-color: #fafafa;
+    transition: border-color 0.2s ease;
+}
+
+
+.form-group input:focus {
+    outline: none;
+    border-color: #0095f6;
+    background-color: #ffffff;
+}
+
+
+.btn-auth {
+    background-color: #0095f6; 
+    color: white;
+    border: none;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-auth:hover {
+    background-color: #0077c5; 
+}
+
+
+.auth-footer {
+    margin-top: 25px;
+    border-top: 1px solid #efefef;
+    padding-top: 20px;
+    font-size: 0.9rem;
+    color: #666666;
+}
+
+.auth-footer a {
+    color: #0095f6;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Contenedor horizontal para agrupar los dos bloques de checkbox */
+.form-options-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    margin: 5px 0;
+}
+
+/* Alinea la casilla de verificacion al lado izquierdo de su respectiva etiqueta */
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-item input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #0095f6; 
+}
+
+.checkbox-item label {
+    font-size: 0.8rem;
+    color: #262626;
+    cursor: pointer;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.checkbox-item label a {
+    color: #0095f6;
+    text-decoration: none;
+    font-weight: bold;
+}
