@@ -1,0 +1,9 @@
+extends ../layout
+
+block content
+    h1.text-center.mt-5 Bienvenido #{ nombre }
+    
+    script.
+        setTimeout(() => {
+        window.location.replace("http://localhost:3000/");
+        }, 2000);

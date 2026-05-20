@@ -11,7 +11,11 @@ app.set("view engine", "pug");
 app.set('views', './views');
 
 // MIDDLEWARES
+// MIDDLEWARES
 app.use(express.static('public'));
+app.use(express.json({ limit: '10mb' }));
+//PARA IMG
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // rutas
 app.get("/",(req, res , next)=>{
