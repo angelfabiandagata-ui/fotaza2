@@ -1,0 +1,38 @@
+extends layout.pug
+
+block content
+  .profile-container
+    // Cabecera del Perfil
+    header.profile-header
+      .profile-avatar-container
+        if usuario && usuario.profile_photo
+                img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
+        else
+                img(src="/images/default-avatar.png", alt="Avatar por defecto", class="profile-avatar")
+
+      .profile-info
+        .profile-title-row
+          h2.profile-username #{usuario ? usuario.username : 'Usuario Invitado'}          
+      //- Estadísticas del Perfil 
+      .profile-stats
+          span #[strong #{publicaciones ? publicaciones.length : 0}] publicaciones
+          span #[strong #{seguidoresCount || 0}] seguidores
+          span #[strong #{seguidosCount || 0}] seguidos
+    
+    hr.profile-divider
+
+    // Galería de Publicaciones
+    section.profile-gallery
+      if publicaciones && publicaciones.length > 0
+        .gallery-grid
+          each foto in publicaciones
+            .gallery-item
+              a(href=`/post/show/${foto.id}`)
+                if foto.images && foto.images.length > 0
+                    img(src=foto.images[0].url, alt=foto.title)
+                else
+                    img(src="/images/default-placeholder.png", alt="Sin imagen")
+                .gallery-item-overlay
+      else
+        .gallery-empty
+          p Sin publicaciones

@@ -35,6 +35,15 @@ app.get("/auth/signup", (req, res) => {
     res.render("auth/signup"); 
 });
 
+app.get("/perfil", (req, res) => {
+    // Simulación de un usuario autenticado (en una aplicación real, esto vendría de la sesión o base de datos)
+    const usuario = {   
+        username: "JohnDoe",
+        profile_photo: "/images/user-profile.jpg"
+    };
+    res.render("perfil", { usuario });
+});
+
 
 // iniciar servidor
 app.listen(PORT, (err) => {

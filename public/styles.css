@@ -220,3 +220,131 @@
     text-decoration: none;
     font-weight: bold;
 }
+
+/* estilos para el contenedor del perfil */
+.profile-container {
+    max-width: 935px;
+    margin: 0 auto;
+    padding: 30px 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Cabecera */
+.profile-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 44px;
+}
+
+.profile-avatar-container {
+    flex: 1; 
+    display: flex;
+    justify-content: center;
+    margin-right: 30px;
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #dbdbdb;
+}
+
+.profile-info {
+    flex: 2;
+}
+
+.profile-title-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.profile-username {
+    font-size: 28px;
+    font-weight: 300;
+    margin: 0;
+}
+
+
+/* Estadísticas */
+.profile-stats {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+
+/* Bio */
+.profile-full-name {
+    font-weight: 600;
+    margin: 0;
+}
+.profile-text {
+    margin: 5px 0 0 0;
+    color: #4a4a4a;
+}
+
+.profile-divider {
+    border: 0;
+    border-top: 1px solid #dbdbdb;
+    margin-bottom: 28px;
+}
+
+/* Grilla de Fotos */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+}
+
+.gallery-item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background-color: #efefef;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+/* Efecto Hover en las fotos */
+.gallery-item-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    color: white;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.gallery-item:hover .gallery-item-overlay {
+    opacity: 1;
+}
+
+.gallery-item:hover img {
+    transform: scale(1.05);
+}
+
+/* Estado Vacío */
+.gallery-empty {
+    text-align: center;
+    padding: 40px;
+    color: #8e8e8e;
+}
