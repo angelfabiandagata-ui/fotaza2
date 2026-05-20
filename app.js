@@ -48,6 +48,11 @@ app.get("/post/new", (req, res) => {
     res.render("post/new-post");
 });
 
+app.get("/post/post", (req, res) => {
+    res.render("post/post");
+});
+
+
 
 // iniciar servidor
 app.listen(PORT, (err) => {
