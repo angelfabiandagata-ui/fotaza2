@@ -44,6 +44,10 @@ app.get("/perfil", (req, res) => {
     res.render("perfil", { usuario });
 });
 
+app.get("/post/new", (req, res) => {
+    res.render("post/new-post");
+});
+
 
 // iniciar servidor
 app.listen(PORT, (err) => {

@@ -1,0 +1,53 @@
+extends ../layout.pug
+
+block content
+  .post-container
+    .post-card
+      h2.post-global-title Nueva Publicación
+
+      //- Formulario para crear nueva publicación
+      form#form-post(action='/post/new' method='POST' class="post-form")
+        
+        //- Columna Izquierda: Zona de carga y Vista Previa 
+        .post-left-column
+          label.photo-upload-zone(for="file-post-input")
+            .photo-preview-box(style="height: auto; min-height: 350px; display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; padding: 15px;")
+              #preview-container(style="display: flex; flex-wrap: wrap; gap: 10px; width: 100%;")
+              
+              .upload-placeholder
+                span.upload-icon 📸+
+                p.upload-text Seleccionar una o más fotos
+            
+          input#file-post-input(type="file" accept="image/*" multiple required)
+          input#post-base64-array(type="hidden" name="imagenesInput")
+
+        //- Columna Derecha: Campos de Texto, Licencia y Etiquetas
+        .post-right-column
+          .form-group
+            label(for='titulo') Titulo
+            input#titulo(type='text' name='titulo' placeholder="Titulo" required)
+
+          .form-group
+            label(for='descripcion') Pie de publicación (Descripcion)
+            textarea#descripcion(name='descripcion' rows="4" placeholder="Descripcion" required)
+
+          //- LICENCIA Y MARCA DE AGUA
+          .form-group.license-section(style="margin-top: 15px;")
+            label.checkbox-label(style="display: flex; align-items: center; gap: 8px; cursor: pointer;")
+              input#checkbox-license(type="checkbox" name="hasLicense")
+              span.checkbox-text ¿Esta publicación requiere Licencia / Copyright?
+
+          #watermark-container.form-group.watermark-section.disabled-section(style="margin-top: 15px; opacity: 0.4; transition: opacity 0.3s;")
+            label(for="input-watermark" style="display: block; margin-bottom: 5px;") Seleccionar imagen para la Marca de Agua:
+            
+            input#input-watermark(type="file" accept="image/*" disabled)
+            //- Input hidden que va a llevar el Base64 de la marca de agua
+            input#watermark-base64(type="hidden" name="watermarkInput")
+            p.form-help-text(style="font-size: 0.8rem; color: #888; margin: 4px 0 0 0;") Se aplicará sobre las fotos del posteo.
+
+          //- SECCIÓN DE ETIQUETAS (LABELS / TAGS)
+          .form-group.tags-section(style="margin-top: 15px;")
+            label(for="input-tags" style="display: block; margin-bottom: 5px;") Etiquetas / Labels (Separadas por coma):
+            input#input-tags(type="text" name="labels" placeholder="ej: naturaleza, autos, cordoba, verano" style="width: 100%; padding: 8px; box-sizing: border-box;")
+
+          button(type='submit' class="btn-auth" style="margin-top: 25px; width: 100%;") Compartir Publicacion
