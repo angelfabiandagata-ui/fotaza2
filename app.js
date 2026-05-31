@@ -3,7 +3,7 @@ import express from 'express';
 import pug from 'pug';
 import './models/sync.js';
 import { connectDatabase } from './models/config.js';
-
+import authRoutes from './routes/auth.js';     
 
 // CONSTANTES
 const PORT = process.env.PORT || 3000;
@@ -28,6 +28,9 @@ app.get("/",(req, res , next)=>{
 app.get("/index",(req, res , next)=>{
     res.render("index");
 })
+
+// Enrutador de Autenticación 
+app.use('/auth', authRoutes);
 
 app.get("/explorar",(req, res , next)=>{
     res.render("explorar");

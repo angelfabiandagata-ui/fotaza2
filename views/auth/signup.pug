@@ -41,3 +41,144 @@ block content
       .auth-footer
         p ¿Ya tienes cuenta? 
           a(href="/auth/login") Inicia sesión aquí
+
+  script.
+      const mensajes = document.querySelector("#mensajes");
+      const enviar  = document.querySelector("#enviar");
+      const campoEmail = document.querySelector("#email");
+      const campoUsuario = document.querySelector("#usuario");
+      const terminosycondiciones = document.querySelector("#tyc");
+      const form = document.querySelector("#form");
+
+      let emailValido = false;
+      let userValido = false;
+      let terYcond = false;
+
+      const emailRE = /^[a-zA-Z0-9._%-]+@gmail\.com$/;
+
+      async function revisarEmail() {
+          const anterior = document.querySelector("#mensajeEmail");
+          if(anterior) anterior.remove(); 
+          
+          const valor = campoEmail.value;
+          if(!valor) return false;
+
+          const res = await fetch(`/auth/revisarEmail?email=${valor}`);
+          const data = await res.json();
+
+          const emailMsg = document.createElement("p");
+          emailMsg.id = "mensajeEmail";
+          emailMsg.className = "error-validation-msg"; 
+          mensajes.appendChild(emailMsg);
+
+          if(!emailRE.test(valor)){
+              emailMsg.innerHTML = "Formato de email incorrecto (debe ser @.com)";
+              emailValido = false;
+              return false;
+          }
+          
+          if(data.respuesta) {                  
+              emailMsg.innerHTML = "Email ya en uso";
+              emailValido = false;
+              return false;
+          } else {
+              emailMsg.innerHTML = "";
+              emailValido = true;
+              return true;
+          }
+      }
+
+      async function revisarUsuario() {
+          const anterior = document.querySelector("#mensajeUsuario");
+          if(anterior) anterior.remove();
+          
+          const valor = campoUsuario.value;
+          if(!valor) {
+              userValido = false;
+              return false;
+          }
+
+          const res = await fetch(`/auth/revisarUsuario?usuario=${valor}`);
+          const data = await res.json();
+
+          const userMsg = document.createElement("p");
+          userMsg.id = "mensajeUsuario";
+          userMsg.className = "error-validation-msg";
+          mensajes.appendChild(userMsg);
+
+          if(data.respuesta) {                  
+              userMsg.innerHTML = "Usuario ya en uso";
+              userValido = false;
+              return false;
+          } else {
+              userMsg.innerHTML = "";
+              userValido = true;
+              return true;
+          }
+      }
+
+      function revisarTyC() {
+          const anterior = document.querySelector("#MensajeTyC");
+          if (anterior) anterior.remove();
+          
+          const tycMsg = document.createElement("p"); 
+          tycMsg.id = "MensajeTyC";
+          tycMsg.className = "error-validation-msg";
+          mensajes.appendChild(tycMsg);
+
+          if(terminosycondiciones.checked){
+              tycMsg.innerHTML = "";
+              terYcond = true;
+              return true;
+          } else {
+              tycMsg.innerHTML = "Tienes que aceptar los Términos y Condiciones";
+              terYcond = false;
+              return false;
+          }
+      }
+
+      function verSiLasContraseniasSonIguales(){
+          const contraseniaInput = document.querySelector("#contrasenia");   
+          const repetirInput = document.querySelector("#repetir");       
+          const anterior = document.querySelector("#ContrasMensaje");
+          if(anterior) anterior.remove();
+
+          const contrasMsg = document.createElement("p");
+          contrasMsg.id = "ContrasMensaje";
+          contrasMsg.className = "error-validation-msg";
+          mensajes.appendChild(contrasMsg);
+
+          if(contraseniaInput.value.length <= 7){ 
+              contrasMsg.innerHTML = "Contraseña demasiado corta (mínimo 8)"; 
+              return false;
+          }
+          if(contraseniaInput.value === repetirInput.value){ 
+              contrasMsg.innerHTML = ""; 
+              return true;       
+          } else {
+              contrasMsg.innerHTML = "Las contraseñas no coinciden";
+              return false;
+          }
+      }
+
+      campoEmail.addEventListener('blur', revisarEmail);
+      campoUsuario.addEventListener('blur', revisarUsuario);
+      terminosycondiciones.addEventListener('change', revisarTyC);
+      
+      const campoContrasenia = document.querySelector("#contrasenia");
+      const campoRepetir = document.querySelector("#repetir");
+      campoContrasenia.addEventListener('blur', verSiLasContraseniasSonIguales);
+      campoRepetir.addEventListener('blur', verSiLasContraseniasSonIguales);
+
+      form.addEventListener('submit', async (event) => { 
+          event.preventDefault(); 
+
+          const emailOk = await revisarEmail();
+          const usuarioOk = await revisarUsuario();
+          const tycOk = revisarTyC();
+          const contraOk = verSiLasContraseniasSonIguales();
+
+          if(emailOk && usuarioOk && tycOk && contraOk){ 
+              HTMLFormElement.prototype.submit.call(form);
+          }
+      });

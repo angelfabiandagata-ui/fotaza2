@@ -221,6 +221,20 @@
     font-weight: bold;
 }
 
+.error-validation-msg {
+    color: #ed4956; 
+    font-size: 0.8rem;
+    margin: 4px 0;
+    text-align: left;
+    font-weight: 600;
+}
+
+.avatar-changer:hover .profile-avatar {
+    opacity: 0.8;
+    filter: brightness(70%);
+    transition: all 0.2s ease;
+}
+
 /* estilos para el contenedor del perfil */
 .profile-container {
     max-width: 935px;
