@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
 import pug from 'pug';
 import './models/sync.js';
 import { connectDatabase } from './models/config.js';
@@ -19,6 +21,23 @@ app.use(express.static('public'));
 app.use(express.json({ limit: '10mb' }));
 //PARA IMG
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// Activador de lectura y firma de Cookies
+app.use(cookieParser());
+// Inicializador del motor de Sesiones
+app.use(session({
+    secret: process.env.SESSION_KEY,
+    resave: false,                                      
+    saveUninitialized: false,                           
+    cookie: { 
+        secure: false, 
+        maxAge: 1000 * 60 * 60 * 24, // Duración exacta de la sesion: 1 día
+        httpOnly: true,
+        sameSite: 'lax', 
+    }
+}));
+
+
+
 
 // rutas
 app.get("/",(req, res , next)=>{
@@ -45,14 +64,7 @@ app.get("/auth/signup", (req, res) => {
     res.render("auth/signup"); 
 });
 
-app.get("/perfil", (req, res) => {
-    // Simulación de un usuario autenticado (en una aplicación real, esto vendría de la sesión o base de datos)
-    const usuario = {   
-        username: "JohnDoe",
-        profile_photo: "/images/user-profile.jpg"
-    };
-    res.render("perfil", { usuario });
-});
+app.use('/auth', authRoutes);
 
 app.get("/post/new", (req, res) => {
     res.render("post/new-post");
