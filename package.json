@@ -20,11 +20,14 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "pg": "^8.21.0",
-    "pg-hstore": "^2.3.4",
-    "pug": "^3.0.4",
-    "sequelize": "^6.37.8"
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "17.4.2",
+    "express": "5.2.1",
+    "express-session": "^1.19.0",
+    "pg": "8.21.0",
+    "pg-hstore": "2.3.4",
+    "pug": "3.0.4",
+    "sequelize": "6.37.8"
   }
 }

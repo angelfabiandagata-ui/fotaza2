@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
 import pug from 'pug';
+import './models/sync.js';
+import { connectDatabase } from './models/config.js';
+
 
 // CONSTANTES
 const PORT = process.env.PORT || 3000;
@@ -58,10 +61,18 @@ app.get("/post/post", (req, res) => {
 
 
 
-// iniciar servidor
-app.listen(PORT, (err) => {
+// INICIALIZACION DEL SERVIDOR Y CONEXION A POSTGRES
+
+connectDatabase()
+  .then(() => {
+    app.listen(PORT, (err) => {
       if (err) {
-        console.error(" [X] Error al iniciar el servidor: ", err);
+        console.error(" ❌ Error al iniciar el servidor: ", err);
+        return;
       }
-      console.log(` [✓] Servidor corriendo en el puerto:${PORT}`);
+      console.log(` [✓] Servidor corriendo impecable en el puerto: ${PORT}`);
     });
+  })
+  .catch((err) => {
+    console.error(" ❌ Error crítico de conexión a la base de datos: ", err);
+  });
