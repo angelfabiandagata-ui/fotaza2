@@ -36,6 +36,11 @@ app.use(session({
     }
 }));
 
+//  Inyector de Variables Locales Globales para PUG
+app.use((req, res, next) => {
+    res.locals.userLogueado = req.session.user || null;
+    next();
+});
 
 
 
@@ -65,6 +70,10 @@ app.get("/auth/signup", (req, res) => {
 });
 
 app.use('/auth', authRoutes);
+
+app.get("/perfil", (req, res) => {
+    res.render("perfil"); 
+});
 
 app.get("/post/new", (req, res) => {
     res.render("post/new-post");

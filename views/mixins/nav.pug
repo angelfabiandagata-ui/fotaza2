@@ -1,4 +1,4 @@
-mixin nav
+mixin nav(userLogueado)
   nav.navbar
     .navbar-container
       
@@ -7,7 +7,15 @@ mixin nav
           a.navbar-item(href='/index') Home
         li  
           a.navbar-item(href='/explorar') Explorar
-        li
+        
+        //- Evaluamos dinámicamente si el usuario está en la sesión
+        if userLogueado
+          li
+            a.navbar-item(href='/perfil') Mi Perfil
+          li
+            a.navbar-item.btn-logout-nav(href='/auth/logout') Salir
+        else
+          li
             a.navbar-item(href='/auth/login') Login
-        li    
+          li    
             a.navbar-item.btn-signup-nav(href='/auth/signup') Registrarse
