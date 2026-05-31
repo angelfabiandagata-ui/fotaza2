@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import pug from 'pug';
 import './models/sync.js';
 import { connectDatabase } from './models/config.js';
+import perfilRoutes from './routes/perfilRoutes.js'; 
 import authRoutes from './routes/auth.js';     
 
 // CONSTANTES
@@ -42,6 +43,12 @@ app.use((req, res, next) => {
     next();
 });
 
+// Enrutador de Autenticación 
+app.use('/auth', authRoutes);
+
+// Enrutador del Perfil 
+app.use('/perfil', perfilRoutes);
+
 
 
 // rutas
@@ -53,8 +60,7 @@ app.get("/index",(req, res , next)=>{
     res.render("index");
 })
 
-// Enrutador de Autenticación 
-app.use('/auth', authRoutes);
+
 
 app.get("/explorar",(req, res , next)=>{
     res.render("explorar");

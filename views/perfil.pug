@@ -2,26 +2,47 @@ extends layout.pug
 
 block content
   .profile-container
-    // Cabecera del Perfil
+    //Cabecera del Perfil 
     header.profile-header
       .profile-avatar-container
-        if usuario && usuario.profile_photo
-                img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
+        if userLogueado && usuario && userLogueado.id === usuario.id
+          label.avatar-changer(for="file-avatar-input" style="cursor: pointer; position: relative; display: block;")
+            
+            if usuario.profile_photo 
+              img#profile-avatar-img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
+            else
+              img#profile-avatar-img(src="/images/default-avatar.png", alt="Avatar por defecto", class="profile-avatar")
+            
+            .avatar-overlay Cambiar foto
+          
+          input#file-avatar-input(type="file" accept="image/*" style="display: none;")
+        
         else
-                img(src="/images/default-avatar.png", alt="Avatar por defecto", class="profile-avatar")
-
+          if usuario && usuario.profile_photo
+            img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
+          else
+            img("/images/default-avatar.png", alt="Avatar por defecto", class="profile-avatar")
+      
       .profile-info
         .profile-title-row
-          h2.profile-username #{usuario ? usuario.username : 'Usuario Invitado'}          
-      //- Estadísticas del Perfil 
-      .profile-stats
+          h2.profile-username #{usuario ? usuario.username : 'Usuario Invitado'}
+          if userLogueado && usuario && userLogueado.id === usuario.id
+            .profile-actions-group(style="display: flex; gap: 10px; align-items: center;")
+              a.btn-upload-nav(href="/post/new" style="background-color: #0095f6; color: white; font-weight: bold; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 0.9rem;") Nueva Publicación
+              a.btn-logout(href="/auth/logout" style="color: #ff4d4d; font-weight: bold; text-decoration: none; border: 1px solid #ff4d4d; padding: 5px 10px; border-radius: 4px; font-size: 0.9rem;") Cerrar Sesión
+          else if userLogueado
+            button.btn-follow Seguir
+        
+        .profile-stats
           span #[strong #{publicaciones ? publicaciones.length : 0}] publicaciones
           span #[strong #{seguidoresCount || 0}] seguidores
           span #[strong #{seguidosCount || 0}] seguidos
-    
+
+        
+
     hr.profile-divider
 
-    // Galería de Publicaciones
+    //- 🖼️ 2. Grilla de Publicaciones (Mosaico Cronológico)
     section.profile-gallery
       if publicaciones && publicaciones.length > 0
         .gallery-grid
@@ -29,10 +50,58 @@ block content
             .gallery-item
               a(href=`/post/show/${foto.id}`)
                 if foto.images && foto.images.length > 0
-                    img(src=foto.images[0].url, alt=foto.title)
+                  img(src=foto.images[0].url, alt=foto.title)
                 else
-                    img(src="/images/default-placeholder.png", alt="Sin imagen")
+                  img(src="/images/default-placeholder.png", alt="Sin imagen")
                 .gallery-item-overlay
       else
         .gallery-empty
           p Sin publicaciones
+          if userLogueado && usuario && userLogueado.id === usuario.id
+            a.btn-upload(href="/post/new") Subir mi primera foto
+
+  script.
+    const fileInput = document.querySelector('#file-avatar-input');
+    const avatarImg = document.querySelector('#profile-avatar-img');
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                    const base64String = reader.result;
+                    try {
+                        const response = await fetch('/perfil/cambiar-avatar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ avatar: base64String })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            avatarImg.src = base64String;
+                            crearToast("¡Foto de perfil actualizada!", "success");
+                        } else {
+                            crearToast("Hubo un error al guardar la foto.", "error");
+                        }
+                    } catch (error) {
+                        console.error("Error en la peticion asíncrona:", error);
+                        crearToast("Error de conexión al actualizar la foto", "error");
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    function crearToast(mensaje, tipo = "success") {
+        const toast = document.createElement("div");
+        toast.classList.add("toast-flotante", tipo);
+        toast.innerText = mensaje;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add("fade-out");
+            toast.addEventListener("transitionend", () => toast.remove());
+        }, 3000);
+    }

@@ -282,6 +282,18 @@
     margin: 0;
 }
 
+.btn-edit-profile, .btn-follow {
+    background-color: transparent;
+    border: 1px solid #dbdbdb;
+    color: #262626;
+    border-radius: 4px;
+    padding: 5px 9px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
 
 /* Estadísticas */
 .profile-stats {
@@ -362,6 +374,17 @@
     padding: 40px;
     color: #8e8e8e;
 }
+
+.btn-upload {
+    display: inline-block;
+    margin-top: 15px;
+    color: #0095f6;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+
+
 
 /* Estilos para la página de nueva publicación */
 .post-container {
@@ -499,3 +522,53 @@
     color: #888;
     margin-top: 4px;
 }
+
+/*TOAST - ALERT*/
+
+/*Contenedor base del Toast */
+.toast-flotante {
+    position: fixed;
+    bottom: 20px;       
+    right: 20px;        
+    padding: 15px 25px;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    font-family: sans-serif;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999;     
+    font-size: 0.95rem;
+    
+
+    animation: slideIn 0.3s ease-out forwards;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.toast-flotante.fade-out {
+    opacity: 0 !important;                  
+    transform: translateY(20px) !important; 
+}
+
+.toast-flotante.error {
+    background-color: #dc3545; 
+    border-left: 5px solid #bd2130;
+}
+
+.toast-flotante.success {
+    background-color: #28a745; 
+    border-left: 5px solid #1e7e34;
+}
+
+
+@keyframes slideIn {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+
