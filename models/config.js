@@ -1,6 +1,6 @@
 import  'dotenv/config';
 import { Sequelize } from 'sequelize';
-
+import pg from 'pg';
 
 const sslConn = process.env.DB_SSL === 'true' ? {
     ssl: {
@@ -11,8 +11,8 @@ const sslConn = process.env.DB_SSL === 'true' ? {
 
 const sequelize = new Sequelize({
     dialect: 'postgres',
-    dialectOptions: sslConn,
     dialectModule: pg,
+    dialectOptions: sslConn,
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),
     database: process.env.DB_NAME,
