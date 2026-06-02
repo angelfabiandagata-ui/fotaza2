@@ -5,10 +5,8 @@ block content
     .post-card
       h2.post-global-title Nueva Publicación
 
-      //- Formulario para crear nueva publicación
       form#form-post(action='/post/new' method='POST' class="post-form")
         
-        //- Columna Izquierda: Zona de carga y Vista Previa 
         .post-left-column
           label.photo-upload-zone(for="file-post-input")
             .photo-preview-box(style="height: auto; min-height: 350px; display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; padding: 15px;")
@@ -21,17 +19,15 @@ block content
           input#file-post-input(type="file" accept="image/*" multiple required)
           input#post-base64-array(type="hidden" name="imagenesInput")
 
-        //- Columna Derecha: Campos de Texto, Licencia y Etiquetas
         .post-right-column
           .form-group
-            label(for='titulo') Titulo
-            input#titulo(type='text' name='titulo' placeholder="Titulo" required)
+            label(for='titulo') Título
+            input#titulo(type='text' name='titulo' placeholder="Título" required)
 
           .form-group
-            label(for='descripcion') Pie de publicación (Descripcion)
-            textarea#descripcion(name='descripcion' rows="4" placeholder="Descripcion" required)
+            label(for='descripcion') Pie de publicación (Descripción)
+            textarea#descripcion(name='descripcion' rows="4" placeholder="Descripción" required)
 
-          //- LICENCIA Y MARCA DE AGUA
           .form-group.license-section(style="margin-top: 15px;")
             label.checkbox-label(style="display: flex; align-items: center; gap: 8px; cursor: pointer;")
               input#checkbox-license(type="checkbox" name="hasLicense")
@@ -39,15 +35,96 @@ block content
 
           #watermark-container.form-group.watermark-section.disabled-section(style="margin-top: 15px; opacity: 0.4; transition: opacity 0.3s;")
             label(for="input-watermark" style="display: block; margin-bottom: 5px;") Seleccionar imagen para la Marca de Agua:
-            
             input#input-watermark(type="file" accept="image/*" disabled)
-            //- Input hidden que va a llevar el Base64 de la marca de agua
+            
+
             input#watermark-base64(type="hidden" name="watermarkInput")
             p.form-help-text(style="font-size: 0.8rem; color: #888; margin: 4px 0 0 0;") Se aplicará sobre las fotos del posteo.
 
-          //- SECCIÓN DE ETIQUETAS (LABELS / TAGS)
+
           .form-group.tags-section(style="margin-top: 15px;")
             label(for="input-tags" style="display: block; margin-bottom: 5px;") Etiquetas / Labels (Separadas por coma):
             input#input-tags(type="text" name="labels" placeholder="ej: naturaleza, autos, cordoba, verano" style="width: 100%; padding: 8px; box-sizing: border-box;")
 
           button(type='submit' class="btn-auth" style="margin-top: 25px; width: 100%;") Compartir Publicacion
+
+  script.
+      const form = document.querySelector('#form-post');
+      const fileInput = document.querySelector('#file-post-input');
+      const previewContainer = document.querySelector('#preview-container');
+      const placeholder = document.querySelector('.upload-placeholder');
+      const hiddenInput = document.querySelector('#post-base64-array');
+      
+      const checkboxLicense = document.querySelector('#checkbox-license');
+      const watermarkContainer = document.querySelector('#watermark-container');
+      const inputWatermark = document.querySelector('#input-watermark');
+      const hiddenWatermark = document.querySelector('#watermark-base64');
+      
+      let base64Guardados = [];
+      let watermarkBase64 = '';
+      
+      // Procesador de imagenes base64 para la vista previa
+      fileInput.addEventListener('change', async (e) => {
+          const files = Array.from(e.target.files);
+          previewContainer.innerHTML = ''; 
+          if (files.length > 0) {
+              placeholder.style.display = 'none';
+              const base64Promises = files.map(file => {
+                  return new Promise((resolve) => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => resolve(reader.result);
+                      reader.readAsDataURL(file);
+                  });
+              });
+              base64Guardados = await Promise.all(base64Promises);
+              base64Guardados.forEach(base64 => {
+                  const img = document.createElement('img');
+                  img.src = base64;
+                  img.style.width = 'calc(50% - 5px)'; 
+                  img.style.height = '150px'; 
+                  img.style.objectFit = 'cover'; 
+                  img.style.borderRadius = '4px';
+                  previewContainer.appendChild(img);
+              });
+          } else {
+              placeholder.style.display = 'block';
+              base64Guardados = [];
+          }
+      });
+      
+      // Convertidor asíncrono para la estampa de la marca de agua
+      inputWatermark.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) {
+              const reader = new FileReader();
+              reader.onloadend = () => { watermarkBase64 = reader.result; };
+              reader.readAsDataURL(file);
+          } else {
+              watermarkBase64 = '';
+          }
+      });
+      
+      // Interruptor dinámico de interfaz para la sección de copyright
+      checkboxLicense.addEventListener('change', (e) => {
+          if (e.target.checked) {
+              watermarkContainer.style.opacity = '1'; 
+              watermarkContainer.style.pointerEvents = 'auto'; 
+              inputWatermark.removeAttribute('disabled');
+          } else {
+              watermarkContainer.style.opacity = '0.4'; 
+              watermarkContainer.style.pointerEvents = 'none'; 
+              inputWatermark.setAttribute('disabled', 'true'); 
+              inputWatermark.value = ''; 
+              watermarkBase64 = '';
+          }
+      });
+      
+      form.addEventListener('submit', (e) => {
+          if (base64Guardados.length === 0) {
+              e.preventDefault(); 
+              alert("Por favor, selecciona al menos una foto antes de publicar."); 
+              return;
+          }
+          hiddenInput.value = JSON.stringify(base64Guardados);
+          hiddenWatermark.value = watermarkBase64;
+      });

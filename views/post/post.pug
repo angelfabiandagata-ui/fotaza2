@@ -3,12 +3,12 @@ extends ../layout.pug
 block content
   .post-detail-container
     
-    //- COLUMNA IZQUIERDA: Carrusel de Fotos
+    //Carrusel de Fotos
     .post-detail-media
       if imagenesDetalladas && imagenesDetalladas.length > 0
         .carousel-slides
           each img, index in imagenesDetalladas
-            .slide-wrapper(data-index=index style="position: relative; display: ${index === 0 ? 'block' : 'none'};")
+            .slide-wrapper(data-index=index style=`position: relative; display: ${index === 0 ? 'block' : 'none'};`)
               img.carousel-img(
                 src=img.url, 
                 alt=publicacion.title, 
@@ -28,17 +28,15 @@ block content
       else
         img.carousel-img-placeholder(src="/images/default-placeholder.png")
 
-    //- COLUMNA DERECHA: Datos dinamicos por IMAGEN
     .post-detail-info
       
-      //- Cabecera fija de la Publicación Madre
+      //- Cabecera fija de la Publicacion
       .post-info-header
-        //- Contenedor flex para alinear el nombre del creador con el botón de seguir
         .creator-row(style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;")
           span.creator-name(style="font-weight: bold; color: #555; font-size: 1rem;") 
-           | Creador: #{publicacion.usuarioCreador ? publicacion.usuarioCreador.username : 'Usuario Desconocido'}
+            | Creador: #{publicacion.usuarioCreador ? publicacion.usuarioCreador.username : 'Usuario Desconocido'}
           
-          //- Solo aparece si la publicación NO es del usuario logueado
+          //- Botón de seguimiento asíncrono controlado por el middleware
           if !esSuPropioPost
             button#btn-follow(
               data-creator-id=publicacion.user_id 
@@ -47,17 +45,16 @@ block content
 
         h3.post-info-title #{publicacion.title}
         p.post-info-desc #{publicacion.description}
+        
         - const listaTags = etiquetas || publicacion.etiquetas
         if listaTags && listaTags.length > 0
-            .post-info-tags(style="display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 15px 0;")
-              each tag in listaTags
-                span.badge-tag(style="background-color: #e3f2fd; color: #0d6efd; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 500; text-transform: lowercase;") 
-                  | ##{tag.name}
-
+          .post-info-tags(style="display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 15px 0;")
+            each tag in listaTags
+              span.badge-tag(style="background-color: #e3f2fd; color: #0d6efd; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 500; text-transform: lowercase;") #{'#' + tag.name}
 
         span#photo-counter.photo-counter-text Imagen 1 de #{imagenesDetalladas.length}
 
-      //- SECCIÓN DE VALORACIÓN DINÁMICA (Cambia por imagen)
+      //- SECCIÓN DE VALORACION DINÁMICA
       .post-info-rating
         .rating-display
           span.rating-label Valoración de esta foto: 
@@ -75,19 +72,18 @@ block content
             option(value="5") 5 ⭐
           button(type="submit").btn-rating-submit Votar
 
-      //- LISTA DE COMENTARIOS DINÁMICA (Cambia por imagen)
+      //- LISTA DE COMENTARIOS DINÁMICA 
       .post-info-comments#comments-box
 
-
-      //- Caja de entrada para el comentario de la foto actual
+      //- Caja de entrada para comentarios
       .post-info-footer
         form#form-comment.comment-form
           input#hidden-image-id-comment(type="hidden" name="imageId")
-          input#input-comment-text(type="text", placeholder="Añade un comentario ", required).comment-input
+          input#input-comment-text(type="text", placeholder="Añade un comentario a esta foto...", required).comment-input
           button(type="submit").btn-comment-submit Publicar
 
-  script
-    | window.listaImagenes = !{JSON.stringify(imagenesDetalladas)};
+  script.
+    window.listaImagenes = !{JSON.stringify(imagenesDetalladas)};
 
-  //- llamado al script externo
-  script(src="/js/show-post.js")
+  //- Ejecutor interactivo asíncrono
+  script(src="/js/post.js")

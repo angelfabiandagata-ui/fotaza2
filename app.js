@@ -7,6 +7,7 @@ import './models/sync.js';
 import { connectDatabase } from './models/config.js';
 import perfilRoutes from './routes/perfilRoutes.js'; 
 import authRoutes from './routes/auth.js';     
+import postRoutes from './routes/postRoutes.js';
 
 // CONSTANTES
 const PORT = process.env.PORT || 3000;
@@ -49,7 +50,8 @@ app.use('/auth', authRoutes);
 // Enrutador del Perfil 
 app.use('/perfil', perfilRoutes);
 
-
+// Conectamos el enrutador de Posts 
+app.use(postRoutes);
 
 // rutas
 app.get("/",(req, res , next)=>{
