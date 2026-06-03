@@ -1,4 +1,61 @@
-extends layout.pug 
-block content 
-    .container
-        h1 Aca podes buscar fotos o publicaciones
+extends layout.pug
+
+block content
+  .explore-container(style="max-width: 1200px; margin: 0 auto; padding: 20px;")
+    
+    //MOTOR DE BÚSQUEDA Y FILTROS COMBINABLES
+    .search-engine-box(style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);")
+      h2(style="margin-top: 0; color: #333;") 🔍 Descubrir Contenido
+      
+      form(action="/explorar" method="GET" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;")
+        
+        //- Filtro por Palabra Clave
+        .form-group(style="flex: 2; min-width: 250px;")
+          label(style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;") Buscar por palabra clave:
+          input(type="text" name="keyword" value=query.keyword placeholder="ej: cordoba, dibujo, tuning..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;")
+        
+        //- Filtro por Etiqueta 
+        .form-group(style="flex: 1; min-width: 180px;")
+          label(style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;") Filtrar por Etiqueta:
+          select(name="tag" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: white;")
+            option(value="") -- Todas las etiquetas --
+            each t in todasLasEtiquetas
+              option(value=t.name selected=(query.tag === t.name)) #{'#' + t.name}
+        
+        //- Botones de Acción
+        .form-actions(style="display: flex; gap: 10px;")
+          button(type="submit" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;") Buscar
+          if query.keyword || query.tag
+            a(href="/explorar" style="background: #6c757d; color: white; text-decoration: none; padding: 10px 15px; border-radius: 4px; font-weight: bold; display: inline-block;") Limpiar
+
+    //- MUESTRARIO / RESULTADOS DE PUBLICACIONES
+    .results-section
+      if query.keyword || query.tag
+        h3(style="color: #555; margin-bottom: 20px;") 📌 Resultados de la búsqueda:
+      else
+        h3(style="color: #555; margin-bottom: 20px;") 🔥 Últimas publicaciones globales:
+
+      if publicaciones && publicaciones.length > 0
+        .gallery-grid(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;")
+          each post in publicaciones
+            .gallery-item(style="border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; transition: transform 0.2s;")
+              
+              //- Enlace al detalle del carrusel indexado
+              a(href=`/post/show/${post.id}` style="text-decoration: none; color: inherit;")
+                if post.images && post.images.length > 0
+                  img(src=post.images[0].url alt=post.title style="width: 100%; height: 220px; object-fit: cover; display: block;")
+                else
+                  img(src="/images/default-placeholder.png" style="width: 100%; height: 220px; object-fit: cover; display: block;")
+                
+                .post-card-body(style="padding: 15px;")
+                  h4(style="margin: 0 0 5px 0; color: #222; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;") #{post.title}
+                  p(style="margin: 0; color: #666; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;") #{post.description}
+                  
+                  //- Etiquetas inferiores de la miniatura
+                  if post.etiquetas && post.etiquetas.length > 0
+                    .post-card-tags(style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px;")
+                      each tag in post.etiquetas
+                        span(style="font-size: 0.75rem; color: #007bff; background: #e3f2fd; padding: 2px 6px; border-radius: 10px;") #{'#' + tag.name}
+      else
+        .no-results(style="text-align: center; padding: 50px; background: #f8f9fa; border-radius: 8px; color: #777;")
+          p  No se encontraron publicaciones que coincidan con los criterios de busqueda
