@@ -5,6 +5,7 @@ import {
     verDetallePublicacion, 
     crearComentarioFoto, 
     valorarFoto, 
+    explorarContenido,
     toggleSeguirUsuario 
 } from '../controller/postController.js';
 
@@ -28,7 +29,6 @@ router.get('/post/show/:id', requerirAutenticacion, verDetallePublicacion);
 // INTERACCIONES ASÍNCRONAS 
 
 
-
 router.post('/post/comment', requerirAutenticacion, crearComentarioFoto);
 
 
@@ -38,6 +38,8 @@ router.post('/post/rate', requerirAutenticacion, valorarFoto);
 
 // EXPLORACIÓN Y RELACIONES
 
+// Motor de búsqueda combinada por palabras clave y tags
+router.get('/explorar', explorarContenido);
 
 
 // Sistema dinámico de Seguir / Dejar de seguir creadores

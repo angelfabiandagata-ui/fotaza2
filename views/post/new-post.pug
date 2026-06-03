@@ -119,12 +119,58 @@ block content
           }
       });
       
-      form.addEventListener('submit', (e) => {
+     form.addEventListener('submit', async (e) => {
+          e.preventDefault(); 
+
           if (base64Guardados.length === 0) {
-              e.preventDefault(); 
-              alert("Por favor, selecciona al menos una foto antes de publicar."); 
+              crearToast("Por favor, selecciona al menos una foto antes de publicar", "error"); 
               return;
           }
-          hiddenInput.value = JSON.stringify(base64Guardados);
-          hiddenWatermark.value = watermarkBase64;
+
+          // Armamos el paquete con TODOS los datos del formulario
+          const datosEnviar = {
+              imagenesInput: JSON.stringify(base64Guardados),
+              watermarkInput: watermarkBase64,
+              titulo: document.querySelector('#titulo').value,
+              descripcion: document.querySelector('#descripcion').value,
+              hasLicense: checkboxLicense.checked,
+              labels: document.querySelector('#input-tags').value
+          };
+
+          try {
+              // Enviamos los datos al servidor 
+              const response = await fetch('/post/new', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(datosEnviar)
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                  // Si el controlador guardó todo bien, redirigimos por JS
+                  window.location.href = '/explorar'; 
+              } else {
+                  // el middleware manda el JSON y se dibuja el Toast flotante
+                  crearToast(data.message || "No se pudo subir la publicación", "error");
+              }
+
+          } catch (error) {
+              console.error(" Error de red al publicar:", error);
+              crearToast("Error de conexión al subir la publicación", "error");
+          }
       });
+
+      // FUNCIÓN DE TOAST FLOTANTE LOCAL
+      function crearToast(mensaje, tipo = "success") {
+          const toast = document.createElement("div");
+          toast.classList.add("toast-flotante", tipo);
+          toast.innerText = mensaje;
+
+          document.body.appendChild(toast);
+
+          setTimeout(() => {
+              toast.classList.add("fade-out");
+              toast.addEventListener("transitionend", () => toast.remove());
+          }, 3000);
+      }

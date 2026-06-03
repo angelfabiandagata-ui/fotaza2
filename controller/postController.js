@@ -75,11 +75,13 @@ export const crearPublicacion = async (req, res) => {
             }
         }
 
-        return res.redirect('/perfil');
+        return res.json({ 
+            success: true, 
+            message: "¡Publicación creada con éxito!" 
+        });
 
     } catch (error) {
-        console.error(" Error en la creación de publicación multiple:", error);
-        return res.status(500).send("Error interno del servidor al procesar el album");
+        console.error(" Error en la creación de publicación", error);
     }
 };
 
@@ -230,8 +232,9 @@ export const valorarFoto = async (req, res) => {
         });
 
         if (votoExistente) {
-           crearToast("Ya has valorado esta imagen", "error"); return res.json({ 
+            return res.json({
                 success: false,
+                message: "Ya has valorado esta imagen"
             });
         }
 
@@ -266,7 +269,70 @@ export const valorarFoto = async (req, res) => {
 };
 
 
-//
+//  MOTOR DE BÚSQUEDA / EXPLORAR CONTENT
+
+export const explorarContenido = async (req, res) => {
+    try {
+        const { keyword, tag } = req.query; 
+
+        const etiquetasDisponibles = await label.findAll({
+            attributes: ['name'],
+            group: ['name'],
+            order: [['name', 'ASC']]
+        });
+
+        let condicionesPublicacion = { state: true }; 
+        let condicionesEtiqueta = {};
+
+        if (keyword && keyword.trim() !== '') {
+            const termino = `%${keyword.trim()}%`;
+            condicionesPublicacion[Op.or] = [
+                { title: { [Op.iLike]: termino } },      
+                { description: { [Op.iLike]: termino } }  
+            ];
+        }
+
+        if (tag && tag.trim() !== '') {
+            condicionesEtiqueta.name = tag.trim().toLowerCase();
+        }
+
+        const publicacionesEncontradas = await publication.findAll({
+            where: condicionesPublicacion,
+            order: [['createdAt', 'DESC']], 
+            include: [
+                {
+                    model: image,
+                    as: 'images',
+                    attributes: ['url'] 
+                },
+                {
+                    model: label,
+                    as: 'etiquetas',
+                    where: Object.keys(condicionesEtiqueta).length > 0 ? condicionesEtiqueta : null,
+                    required: Object.keys(condicionesEtiqueta).length > 0 
+                }
+            ]
+        });
+
+        const publicacionesLimpias = publicacionesEncontradas.map(p => p.get({ plain: true }));
+        const todasLasEtiquetasLimpias = etiquetasDisponibles.map(e => e.get({ plain: true }));
+
+        return res.render('explorar', {
+            publicaciones: publicacionesLimpias,
+            todasLasEtiquetas: todasLasEtiquetasLimpias,
+            query: {
+                keyword: keyword || '',
+                tag: tag || ''
+            },
+            userLogueado: req.session.user || null
+        });
+
+    } catch (error) {
+        console.error(" Error en el motor de busqueda :", error);
+        return res.status(500).send("Error interno en el motor de busqueda");
+    }
+};
+
 
 //  SEGUIR / DEJAR DE SEGUIR (ASÍNCRONICO)
 
@@ -313,19 +379,3 @@ export const toggleSeguirUsuario = async (req, res) => {
         return res.status(500).json({ success: false, message: "Error interno de base de datos" });
     }
 };
-
-// Funcion para crear un alerta flotante (toast) de forma dinámica
-function crearToast(mensaje, tipo = "success") {
-    const toast = document.createElement("div");
-    toast.classList.add("toast-flotante", tipo);
-    toast.innerText = mensaje;
-
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add("fade-out");
-        toast.addEventListener("transitionend", () => {
-            toast.remove();
-        });
-    }, 3000);
-}

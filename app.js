@@ -8,6 +8,7 @@ import { connectDatabase } from './models/config.js';
 import perfilRoutes from './routes/perfilRoutes.js'; 
 import authRoutes from './routes/auth.js';     
 import postRoutes from './routes/postRoutes.js';
+import { manejoDeErrores } from './middleware/errorMiddleware.js';
 
 // CONSTANTES
 const PORT = process.env.PORT || 3000;
@@ -53,6 +54,9 @@ app.use('/perfil', perfilRoutes);
 // Conectamos el enrutador de Posts 
 app.use(postRoutes);
 
+//Manejo de errores
+app.use(manejoDeErrores);
+
 // rutas
 app.get("/",(req, res , next)=>{
     res.render("index");
@@ -61,7 +65,6 @@ app.get("/",(req, res , next)=>{
 app.get("/index",(req, res , next)=>{
     res.render("index");
 })
-
 
 
 app.get("/explorar",(req, res , next)=>{
