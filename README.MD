@@ -30,6 +30,26 @@ El proyecto está construido bajo la arquitectura **MVC (Modelo-Vista-Controlado
 | **dotenv** "17.4.2"| Gestión segura de credenciales y variables de entorno (`.env`). |
 
 ---
+## 🗺️ Arquitectura de API: Endpoints del Proyecto
+
+Los **endpoints** representan las "ventanillas de atención" de nuestro servidor Express. El Frontend (vistas en Pug) se comunica con estas URLs para solicitar páginas HTML o intercambiar datos en formato JSON de manera asíncrona.
+
+### 📄 1. Endpoints de Renderizado (Devuelven Vistas HTML)
+* **`GET /explorar`**: Carga el motor de búsqueda y el feed principal con todas las publicaciones públicas.
+* **`GET /auth/login`**: Renderiza el formulario de inicio de sesión.
+* **`GET /auth/signup`**: Renderiza el formulario de registro de nuevos usuarios.
+
+### ⚡ 2. Endpoints de Acción e Intercambio Asíncrono (Devuelven JSON / Redirecciones)
+* **`POST /auth/login`**: Procesa la autenticación, verifica el hash con `bcrypt` y genera la sesión del usuario.
+* **`POST /auth/signup`**: Valida duplicados e inserta un nuevo usuario en la base de datos encriptando su contraseña.
+* **`GET /auth/logout`**: cierra la sesión del servidor y limpia las cookies del navegador.
+* **`POST /post/new`**: Recibe el payload del formulario (título, descripción, tags y el array de imágenes en Base64) para impactar los registros correspondientes mediante Sequelize.
+* **`POST /post/comment`**: *(Asíncrono)* Inserta un nuevo comentario vinculado a una imagen específica y retorna el nombre del usuario para su inserción inmediata en el DOM.
+* **`POST /post/rate`**: *(Asíncrono)* Registra una nueva puntuación, calcula el promedio en tiempo real mediante funciones de agregación de la base de datos y retorna los nuevos valores.
+* **`POST /user/toggle-follow`**: *(Asíncrono)* Gestiona de forma relacional el flujo de seguir o dejar de seguir a un creador de contenido.
+
+
+---
 
 ## ⚙️ Requisitos Previos e Instalación
 
