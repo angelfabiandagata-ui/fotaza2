@@ -11,7 +11,7 @@ block content
             if usuario.profile_photo 
               img#profile-avatar-img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
             else
-              img#profile-avatar-img(src="/images/default-avatar.png", alt="Avatar por defecto", class="profile-avatar")
+              img#profile-avatar-img(src="/images/fotazaavatar.jpg", alt="Avatar por defecto", class="profile-avatar")
             
             .avatar-overlay Cambiar foto
           
@@ -21,7 +21,7 @@ block content
           if usuario && usuario.profile_photo
             img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
           else
-            img("/images/default-avatar.png", alt="Avatar por defecto", class="profile-avatar")
+            img(src="/images/fotazaavatar.jpg", alt="Avatar por defecto", class="profile-avatar")
       
       .profile-info
         .profile-title-row

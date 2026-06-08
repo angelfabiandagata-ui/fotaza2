@@ -26,7 +26,7 @@ router.get("/revisarEmail", async (req, res) => {
         const existe = await user.findOne({ where: { email: email } });
         return res.json({ respuesta: existe ? true : false });
     } catch (error) {
-        console.error("❌ Error al revisar email asíncrono:", error);
+        console.error(" Error al revisar email asíncrono:", error);
         return res.status(500).json({ error: "Error de servidor" });
     }
 });
@@ -38,7 +38,7 @@ router.get("/revisarUsuario", async (req, res) => {
         const existe = await user.findOne({ where: { username: usuario } });
         return res.json({ respuesta: existe ? true : false });
     } catch (error) {
-        console.error("❌ Error al revisar usuario asíncrono:", error);
+        console.error(" Error al revisar usuario asíncrono:", error);
         return res.status(500).json({ error: "Error de servidor" });
     }
 });
