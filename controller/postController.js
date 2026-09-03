@@ -1,4 +1,5 @@
-import { Op, Sequelize as sequelize } from "sequelize";
+import { Op, Sequelize } from "sequelize";
+import sequelize from '../models/config.js';
 import { publication } from '../models/publication.js';
 import { image } from '../models/image.js';
 import { comment } from '../models/comment.js';
@@ -6,6 +7,7 @@ import { user } from '../models/user.js';
 import { label } from '../models/label.js';
 import { follower } from '../models/follower.js';
 import { assessment } from '../models/assessment.js';
+
 
 
 //  FORMULARIO NUEVA PUBLICACIÓN
@@ -19,69 +21,94 @@ export const formularioNuevaPublicacion = (req, res) => {
 // CREAR PUBLICACIÓN 
 
 export const crearPublicacion = async (req, res) => {
+    const t = await sequelize.transaction();
+
     try {
         if (!req.session || !req.session.user) {
-            return res.redirect('/auth/login');
+            await t.rollback();
+            return res.status(401).json({ 
+                success: false, 
+                message: "Sesión expirada. Por favor, inicia sesión nuevamente" 
+            });
         }
 
-        const { titulo, descripcion, imagenesInput, labels, hasLicense, watermarkInput } = req.body; 
+        const { titulo, descripcion, imagenesInput, labels, hasLicense, watermarkInput } = req.body;
         const userIdLogueado = req.session.user.id;
 
         if (!imagenesInput) {
-            return res.status(400).send("Error: No se cargo ninguna foto");
+            await t.rollback();
+            return res.status(400).json({ 
+                success: false, 
+                message: "No se cargó ninguna foto." 
+            });
         }
 
         const listaImagenesBase64 = JSON.parse(imagenesInput);
         if (listaImagenesBase64.length === 0) {
-            return res.status(400).send("Error: El post esta vacío");
-        }
-
-        // Insertamos la publicacion
-        const nuevaPublicacion = await publication.create({
-            user_id: userIdLogueado,
-            state: true,                     
-            title: titulo,                   
-            description: descripcion,        
-            comments_allowed: true,          
-            number_complaints: 0,
-            number_assessments: 0,
-            average_assessment: 0.0
-        });
-
-        // Procesamos Licencia y Marca de Agua
-        const requiereLicencia = hasLicense === 'on';
-        const stringMarcaAgua = requiereLicencia && watermarkInput ? watermarkInput : null;
-
-        // Guardamos las imágenes del carrusel
-        for (const base64Foto of listaImagenesBase64) {
-            await image.create({
-                post_id: nuevaPublicacion.id,       
-                url: base64Foto,                    
-                type: "jpeg",                        
-                copyright: requiereLicencia,         
-                license: requiereLicencia,           
-                watermark: stringMarcaAgua          
+            await t.rollback();
+            return res.status(400).json({ 
+                success: false, 
+                message: "El post no puede estar vacío" 
             });
         }
 
-        // Guardamos las etiquetas si es que se enviaron
+        // 2. Insertamos la publicación
+        const nuevaPublicacion = await publication.create({
+            user_id: userIdLogueado,
+            state: true,                                
+            title: titulo,                                  
+            description: descripcion,                    
+            comments_allowed: true,                          
+            number_complaints: 0,
+            number_assessments: 0,
+            average_assessment: 0.0
+        }, { transaction: t });
+
+        // Procesamos Licencia y Marca de Agua
+        const requiereLicencia = hasLicense === true || hasLicense === 'on';
+        const stringMarcaAgua = requiereLicencia && watermarkInput ? watermarkInput : null;
+
+        // Guardamos las imágenes vinculadas a la transacción
+        for (const base64Foto of listaImagenesBase64) {
+            await image.create({
+                post_id: nuevaPublicacion.id,          
+                url: base64Foto,                                    
+                type: "jpeg",                                        
+                copyright: requiereLicencia,                
+                license: requiereLicencia,                  
+                watermark: stringMarcaAgua                  
+            }, { transaction: t });
+        }
+
+        // Guardamos las etiquetas vinculadas a la transacción
         if (labels && labels.trim() !== '') {
             const arrayEtiquetas = labels.split(',').map(tag => tag.trim().toLowerCase());
             for (const nombreEtiqueta of arrayEtiquetas) {
                 await label.create({
-                    post_id: nuevaPublicacion.id, 
+                    post_id: nuevaPublicacion.id,
                     name: nombreEtiqueta
-                });
+                }, { transaction: t });
             }
         }
 
-        return res.json({ 
-            success: true, 
-            message: "¡Publicación creada con éxito!" 
+        // Confirmamos todos los cambios en la base de datos
+        await t.commit();
+
+        return res.json({
+            success: true,
+            message: "¡Publicación creada con éxito!"
         });
 
     } catch (error) {
-        console.error(" Error en la creación de publicación", error);
+        // Revertimos cualquier inserción previa ante un fallo
+        await t.rollback();
+        console.error("❌ Error en la creación de publicación:", error);
+
+        // Retornamos el JSON de error con status 500 para destrabar el fetch del cliente
+        return res.status(500).json({
+            success: false,
+            message: "Error interno del servidor al procesar la publicación"
+        });
     }
 };
 
@@ -228,8 +255,8 @@ export const valorarFoto = async (req, res) => {
         const resultado = await assessment.findOne({
             where: { image_id: imageId },
             attributes: [
-                [sequelize.fn('COUNT', sequelize.col('id')), 'cantidadVotos'],
-                [sequelize.fn('AVG', sequelize.col('score')), 'promedioReal']
+                [Sequelize.fn('COUNT', Sequelize.col('id')), 'cantidadVotos'],
+                [Sequelize.fn('AVG', Sequelize.col('score')), 'promedioReal']
             ],
             raw: true
         });
