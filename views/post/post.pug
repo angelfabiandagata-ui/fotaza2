@@ -3,7 +3,7 @@ extends ../layout.pug
 block content
   .post-detail-container
     
-    //Carrusel de Fotos
+    //- Carrusel de Fotos (Columna Izquierda)
     .post-detail-media
       if imagenesDetalladas && imagenesDetalladas.length > 0
         .carousel-slides
@@ -28,6 +28,7 @@ block content
       else
         img.carousel-img-placeholder(src="/images/default-placeholder.png")
 
+    //- Informacion y Comentarios (Columna Derecha)
     .post-detail-info
       
       //- Cabecera fija de la Publicacion
@@ -36,12 +37,16 @@ block content
           span.creator-name(style="font-weight: bold; color: #555; font-size: 1rem;") 
             | Creador: #{publicacion.usuarioCreador ? publicacion.usuarioCreador.username : 'Usuario Desconocido'}
           
-          //- Botón de seguimiento asíncrono controlado por el middleware
           if !esSuPropioPost
             button#btn-follow(
               data-creator-id=publicacion.user_id 
               style=`padding: 6px 16px; border-radius: 20px; border: 1px solid #007bff; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; background: ${yaLoSigue ? '#fff' : '#007bff'}; color: ${yaLoSigue ? '#007bff' : '#fff'};`
             ) #{yaLoSigue ? 'Siguiendo' : 'Seguir'}
+          else
+            button#btn-toggle-comments(
+              data-post-id=publicacion.id
+              style="padding: 6px 12px; border-radius: 4px; border: 1px solid #6c757d; background: #f8f9fa; color: #333; cursor: pointer; font-size: 0.8rem; font-weight: 600;"
+            ) #{publicacion.comments_allowed ? 'Cerrar comentarios' : 'Abrir comentarios'}
 
         h3.post-info-title #{publicacion.title}
         p.post-info-desc #{publicacion.description}
@@ -54,7 +59,7 @@ block content
 
         span#photo-counter.photo-counter-text Imagen 1 de #{imagenesDetalladas.length}
 
-      //- SECCIÓN DE VALORACION DINÁMICA
+      //- Seccion de Valoracion Dinamica
       .post-info-rating
         .rating-display
           span.rating-label Valoración de esta foto: 
@@ -72,18 +77,21 @@ block content
             option(value="5") 5 ⭐
           button(type="submit").btn-rating-submit Votar
 
-      //- LISTA DE COMENTARIOS DINÁMICA 
+      //- Lista de Comentarios
       .post-info-comments#comments-box
 
-      //- Caja de entrada para comentarios
-      .post-info-footer
+      //- Formulario para Comentar
+      .post-info-footer#footer-comment-box(style=`display: ${publicacion.comments_allowed ? 'block' : 'none'};`)
         form#form-comment.comment-form
           input#hidden-image-id-comment(type="hidden" name="imageId")
           input#input-comment-text(type="text", placeholder="Añade un comentario a esta foto...", required).comment-input
           button(type="submit").btn-comment-submit Publicar
 
+      //- Aviso de Comentarios Cerrados
+      #comments-closed-msg(style=`display: ${publicacion.comments_allowed ? 'none' : 'block'}; padding: 12px; color: #888; font-style: italic; font-size: 0.9rem; text-align: center; border-top: 1px solid #efefef;`)
+        | Comentarios cerrados por el autor.
+
   script.
     window.listaImagenes = !{JSON.stringify(imagenesDetalladas)};
 
-  //- Ejecutor interactivo asíncrono
   script(src="/js/post.js")

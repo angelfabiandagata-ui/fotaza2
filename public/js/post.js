@@ -233,6 +233,43 @@ document.addEventListener('click', async (e) => {
     }
 });
 
+
+const btnToggleComments = document.querySelector('#btn-toggle-comments');
+const footerCommentBox = document.querySelector('#footer-comment-box');
+const commentsClosedMsg = document.querySelector('#comments-closed-msg');
+
+if (btnToggleComments) {
+    btnToggleComments.addEventListener('click', async () => {
+        const postId = btnToggleComments.getAttribute('data-post-id');
+        try {
+            const response = await fetch('/post/toggle-comments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.comments_allowed) {
+                    btnToggleComments.textContent = 'Cerrar comentarios';
+                    footerCommentBox.style.display = 'block';
+                    commentsClosedMsg.style.display = 'none';
+                } else {
+                    btnToggleComments.textContent = 'Abrir comentarios';
+                    footerCommentBox.style.display = 'none';
+                    commentsClosedMsg.style.display = 'block';
+                }
+                crearToast(data.message, "success");
+            } else {
+                crearToast(data.message, "error");
+            }
+        } catch (error) {
+            console.error("Error al alternar comentarios:", error);
+            crearToast("Error de conexión", "error");
+        }
+    });
+}
+
 // Función para crear un alerta flotante (toast) de forma dinámica
 function crearToast(mensaje, tipo = "success") {
     const toast = document.createElement("div");

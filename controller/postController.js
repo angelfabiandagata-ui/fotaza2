@@ -210,11 +210,19 @@ export const crearComentarioFoto = async (req, res) => {
         await comment.create({
             image_id: parseInt(imageId),
             user_id: userIdLogueado,
-            content: text.trim(), 
-            date: new Date()      
+            content: text.trim(),
+            date: new Date()
         });
 
-        return res.json({ 
+        const foto = await image.findByPk(imageId, { include: [{ model: publication }] });
+        if (!foto || !foto.publication.comments_allowed) {
+            return res.status(403).json({
+                success: false,
+                message: "Los comentarios para esta publicación han sido cerrados por el autor."
+            });
+        }
+
+        return res.json({
             success: true, 
             username: usernameLogueado 
         });
@@ -222,6 +230,40 @@ export const crearComentarioFoto = async (req, res) => {
     } catch (error) {
         console.error("Error al insertar comentario en la foto:", error);
         return res.status(500).json({ success: false, message: "No se pudo publicar tu comentario" });
+    }
+};
+
+// Alternar cierre/apertura de comentarios
+export const toggleComentarios = async (req, res) => {
+    try {
+        if (!req.session || !req.session.user) {
+            return res.status(401).json({ success: false, message: "No autorizado" });
+        }
+
+        const { postId } = req.body;
+        const userId = req.session.user.id;
+
+        const post = await publication.findByPk(postId);
+        if (!post) {
+            return res.status(404).json({ success: false, message: "Publicación no encontrada" });
+        }
+
+        // Solo el creador puede abrir/cerrar comentarios
+        if (post.user_id !== userId) {
+            return res.status(403).json({ success: false, message: "No tienes permiso para modificar esta publicación" });
+        }
+
+        post.comments_allowed = !post.comments_allowed;
+        await post.save();
+
+        return res.json({
+            success: true,
+            comments_allowed: post.comments_allowed,
+            message: post.comments_allowed ? "Comentarios habilitados" : "Comentarios cerrados"
+        });
+    } catch (error) {
+        console.error("Error al alternar comentarios:", error);
+        return res.status(500).json({ success: false, message: "Error interno del servidor" });
     }
 };
 

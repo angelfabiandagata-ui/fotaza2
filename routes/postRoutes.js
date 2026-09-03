@@ -6,7 +6,8 @@ import {
     crearComentarioFoto, 
     valorarFoto, 
     explorarContenido,
-    toggleSeguirUsuario 
+    toggleSeguirUsuario,
+    toggleComentarios
 } from '../controller/postController.js';
 
 import { requerirAutenticacion } from '../middleware/authMiddleware.js';
@@ -30,6 +31,7 @@ router.get('/post/show/:id', requerirAutenticacion, verDetallePublicacion);
 
 
 router.post('/post/comment', requerirAutenticacion, crearComentarioFoto);
+router.post('/post/toggle-comments', requerirAutenticacion, toggleComentarios);
 
 
 router.post('/post/rate', requerirAutenticacion, valorarFoto);
