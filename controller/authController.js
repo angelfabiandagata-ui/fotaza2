@@ -65,6 +65,29 @@ export const iniciarSesion = async (req, res) => {
     }
 };
 
+// VALIDACIONES ASINCRONAS
+export const verificarEmailDisponible = async (req, res) => {
+    try {
+        const { email } = req.query;
+        const existe = await user.revisarEmail(email);
+        return res.json({ respuesta: existe });
+    } catch (error) {
+        console.error("Error al revisar email asíncrono:", error);
+        return res.status(500).json({ error: "Error de servidor" });
+    }
+};
+
+export const verificarUsuarioDisponible = async (req, res) => {
+    try {
+        const { usuario } = req.query;
+        const existe = await user.revisarUsuario(usuario);
+        return res.json({ respuesta: existe });
+    } catch (error) {
+        console.error("Error al revisar usuario asíncrono:", error);
+        return res.status(500).json({ error: "Error de servidor" });
+    }
+};
+
 // CERRAR SESION (LOGOUT)
 export const cerrarSesion = async (req, res) => {
     req.session.destroy((err) => {

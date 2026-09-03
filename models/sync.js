@@ -72,19 +72,13 @@ comment.belongsTo(user,{
     foreignKey: 'user_id',
 });
 
-//publication y user a label (1 - n)
+//publication a label (1 - n)
 publication.hasMany(label,{
     foreignKey: 'post_id',
     as: 'etiquetas',
 });
 label.belongsTo(publication,{
     foreignKey: 'post_id',
-});
-user.hasMany(label,{
-    foreignKey: 'user_id',
-});
-label.belongsTo(user,{
-    foreignKey: 'user_id',
 });
 
 

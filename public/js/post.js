@@ -20,40 +20,43 @@ const currentVotes = document.querySelector('#current-votes');
 
 let currentIndex = 0; // Indice de la foto activa actual
 
-//  FUNCIONES DE CONTROL DEL CARRUSEL Y SINCRONIZACIÓN
+// FUNCIONES DE CONTROL DEL CARRUSEL Y SINCRONIZACIÓN
 
 const actualizarContenidoImagen = (index) => {
     const imgActiva = window.listaImagenes[index];
     if (!imgActiva) return;
 
-    //  Sincronizamos los inputs hidden para que los formularios apunten a la foto correcta
+    // Sincronizamos los inputs hidden para que los formularios apunten a la foto correcta
     if (hiddenRatingId) hiddenRatingId.value = imgActiva.id;
     if (hiddenCommentId) hiddenCommentId.value = imgActiva.id;
 
-    //  Actualizamos contadores y promedios en la interfaz
+    // Actualizamos contadores y promedios en la interfaz
     if (photoCounter) photoCounter.textContent = `Imagen ${index + 1} de ${window.listaImagenes.length}`;
     if (currentRating) currentRating.textContent = `⭐ ${imgActiva.average_assessment || '0.0'}`;
     if (currentVotes) currentVotes.textContent = `(${imgActiva.number_assessments || 0} votos)`;
 
-    //  Limpiamos y redibujamos la caja de comentarios de la imagen especifica
+    // Limpiamos y redibujamos la caja de comentarios de la imagen especifica
     if (commentsBox) {
         commentsBox.innerHTML = '';
-        
+
         if (imgActiva.comentarios && imgActiva.comentarios.length > 0) {
             imgActiva.comentarios.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'comment-item';
+
+                // Formato visual de presentación
+                const fechaFormateada = c.date ? new Date(c.date).toLocaleDateString('es-AR') : '';
+                const autor = c.user ? c.user.username : `Usuario #${c.user_id}`;
+
                 div.innerHTML = `
                     <div class="comment-main">
-                        <strong class="comment-user">${c.usuario}</strong>
-                        <span class="comment-text">${c.texto}</span>
+                        <strong class="comment-user">${autor}</strong>
+                        <span class="comment-text">${c.content}</span>
                     </div>
-                    <span class="comment-date">${c.fecha || ''}</span>
+                    <span class="comment-date">${fechaFormateada}</span>
                 `;
                 commentsBox.appendChild(div);
             });
-        } else {
-            commentsBox.innerHTML = '<p class="no-comments-text" style="color: #888; font-style: italic; padding: 10px;">Sin comentarios en esta foto. ¡Sé el primero!</p>';
         }
     }
 };
@@ -81,7 +84,7 @@ if (btnNext) btnNext.addEventListener('click', () => cambiarSlide(currentIndex +
 if (btnPrev) btnPrev.addEventListener('click', () => cambiarSlide(currentIndex - 1));
 
 
-//  ENVÍO ASÍNCRONICO DE COMENTARIOS
+// ENVÍO ASÍNCRONICO DE COMENTARIOS
 
 if (formComment) {
     formComment.addEventListener('submit', async (e) => {
@@ -124,8 +127,8 @@ if (formComment) {
                 if (window.listaImagenes && window.listaImagenes[currentIndex]) {
                     window.listaImagenes[currentIndex].comentarios.push({ 
                         usuario: resultado.username, 
-                        texto: textoComentario,
-                        fecha: fechaHoy
+                        texto: textoComentario, 
+                        fecha: fechaHoy 
                     });
                 }
             } else {
@@ -138,7 +141,7 @@ if (formComment) {
 }
 
 
-//  ENVIO ASINCRONICO DE VALORACIONES 
+// ENVIO ASINCRONICO DE VALORACIONES 
 
 if (formRating) {
     formRating.addEventListener('submit', async (e) => {
@@ -201,12 +204,13 @@ document.addEventListener('click', async (e) => {
         if (!creatorId) return;
 
         try {
-            const response = await fetch('/user/follow', {
+            // URL sincronizada bajo el prefijo /post
+            const response = await fetch('/follow', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ creatorId: creatorId })
             });
-            
+
             const resultado = await response.json();
 
             if (resultado.success) {
@@ -223,13 +227,13 @@ document.addEventListener('click', async (e) => {
                 crearToast(resultado.message || "No se pudo cambiar el estado de seguimiento", "error");
             }
         } catch (error) {
-            console.error(" Error de red al intentar procesar el follow:", error);
+            console.error("Error de red al intentar procesar el follow:", error);
             crearToast("Error de conexión al seguir al usuario", "error");
         }
     }
 });
 
-// Funcion para crear un alerta flotante (toast) de forma dinámica
+// Función para crear un alerta flotante (toast) de forma dinámica
 function crearToast(mensaje, tipo = "success") {
     const toast = document.createElement("div");
     toast.classList.add("toast-flotante", tipo);

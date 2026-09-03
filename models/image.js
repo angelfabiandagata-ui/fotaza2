@@ -21,6 +21,7 @@ image.init({
   type: {
     type: DataTypes.STRING(50),
   },
+  
   average: {
     type: DataTypes.FLOAT,
   },
@@ -33,6 +34,21 @@ image.init({
   custom_text: {
     type: DataTypes.STRING,
   },
+  average_assessment: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      const votos = this.valoraciones;
+      if (!votos || votos.length === 0) return "0.0";
+      const suma = votos.reduce((acc, curr) => acc + curr.score, 0);
+      return (suma / votos.length).toFixed(1);
+    }
+  },
+  number_assessments: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.valoraciones ? this.valoraciones.length : 0;
+    }
+  }
 }, {
   sequelize,
   modelName: "image",

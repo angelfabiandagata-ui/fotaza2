@@ -96,7 +96,7 @@ export const verDetallePublicacion = async (req, res) => {
             return res.status(404).send("Recurso no válido");
         }
 
-        // Traemos todo los datos de la publicación, incluyendo imágenes, comentarios, valoraciones, eiquetas, y el usuario creador
+        // Traemos todos los datos de la publicación 
         const post = await publication.findByPk(id, {
             include: [
                 {
@@ -130,7 +130,7 @@ export const verDetallePublicacion = async (req, res) => {
             return res.status(404).send("Publicación no encontrada");
         }
 
-        // Control de relacion de seguimiento para pintar correctamente el botón "Seguir" o "Siguiendo"
+        // Control de relación de seguimiento
         let yaLoSigue = false;
         let esSuPropioPost = false;
 
@@ -138,43 +138,24 @@ export const verDetallePublicacion = async (req, res) => {
             const userIdLogueado = req.session.user.id;
             esSuPropioPost = post.user_id === userIdLogueado;
 
-            const seguimiento = await follower.findOne({
-                where: {
-                    follower_id: userIdLogueado,
-                    followed_id: post.user_id
-                }
-            });
-            if (seguimiento) yaLoSigue = true;
+            // Solo consulta a la base de datos si el post pertenece a otra persona
+            if (!esSuPropioPost) {
+                const seguimiento = await follower.findOne({
+                    where: {
+                        follower_id: userIdLogueado,
+                        followed_id: post.user_id
+                    }
+                });
+                if (seguimiento) yaLoSigue = true;
+            }
         }
 
-        // Mapeamos las imágenes y las insertamos 
-        const imagenesDetalladas = post.images.map(img => {
-            const votos = img.valoraciones || [];
-            const cantidadVotos = votos.length;
-            const sumaNotas = votos.reduce((acc, curr) => acc + curr.score, 0);
-            const promedioCalculado = cantidadVotos > 0 ? (sumaNotas / cantidadVotos).toFixed(1) : "0.0";
-
-            const listaComentarios = (img.comentarios || []).map(c => {
-                return {
-                    usuario: c.user ? c.user.username : `Usuario #${c.user_id}`, 
-                    texto: c.content,
-                    fecha: c.date ? new Date(c.date).toLocaleDateString('es-AR') : ''
-                };
-            });
-
-            return {
-                id: img.id,
-                url: img.url,
-                watermark: img.watermark,
-                average_assessment: promedioCalculado, 
-                number_assessments: cantidadVotos,     
-                comentarios: listaComentarios          
-            };
-        });
+        // Serializamos las instancias para pasarlas limpias a la vista.
+        const imagenesDetalladas = post.images.map(img => img.toJSON());
 
         return res.render('post/post', {
-            publicacion: post.get({ plain: true }), 
-            imagenesDetalladas: imagenesDetalladas,
+            publicacion: post.get({ plain: true }),
+            imagenesDetalladas,
             etiquetas: post.etiquetas ? post.etiquetas.map(t => t.get({ plain: true })) : [],
             esSuPropioPost,
             yaLoSigue,
@@ -182,7 +163,7 @@ export const verDetallePublicacion = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(" Error al traer el detalle: ", error);
+        console.error("Error al traer el detalle: ", error);
         return res.status(500).send("Error al cargar la publicacion");
     }
 };

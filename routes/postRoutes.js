@@ -43,6 +43,6 @@ router.get('/explorar', explorarContenido);
 
 
 // Sistema dinámico de Seguir / Dejar de seguir creadores
-router.post('/user/follow', requerirAutenticacion, toggleSeguirUsuario);
+router.post('/follow', requerirAutenticacion, toggleSeguirUsuario);
 
 export default router;
