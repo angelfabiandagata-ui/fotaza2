@@ -270,6 +270,33 @@ if (btnToggleComments) {
     });
 }
 
+// Botón "Me interesa" (solo visible si no es el propio post y el usuario está logueado)
+const btnInteres = document.querySelector('#btn-interes');
+if (btnInteres) {
+    btnInteres.addEventListener('click', async () => {
+        const idFotoActiva = hiddenRatingId ? hiddenRatingId.value : null;
+        if (!idFotoActiva) return;
+
+        try {
+            const response = await fetch('/interes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageId: idFotoActiva })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                window.location.href = data.redirectUrl;
+            } else {
+                crearToast(data.message || 'No se pudo registrar el interés', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            crearToast('Error de conexión', 'error');
+        }
+    });
+}
+
 // Función para crear un alerta flotante (toast) de forma dinámica
 function crearToast(mensaje, tipo = "success") {
     const toast = document.createElement("div");

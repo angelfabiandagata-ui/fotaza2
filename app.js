@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import postRoutes from './routes/postRoutes.js';
 import homeRoutes from './routes/homeRoutes.js';
 import { manejoDeErrores } from './middleware/errorMiddleware.js';
+import messageRoutes from './routes/messageRoutes.js';
 
 // CONSTANTES
 const PORT = process.env.PORT || 3000;
@@ -52,18 +53,8 @@ app.use('/', homeRoutes);
 app.use('/auth', authRoutes);       
 app.use('/perfil', perfilRoutes);   
 app.use('/', postRoutes);           
+app.use('/', messageRoutes);
 
-
-/*// Enrutador de Autenticación 
-app.use('/auth', authRoutes);
-
-// Enrutador del Perfil 
-app.use('/perfil', perfilRoutes);
-
-// Conectamos el enrutador de Posts 
-app.use(postRoutes);
-
-*/
 //Manejo de errores
 app.use(manejoDeErrores);
 
