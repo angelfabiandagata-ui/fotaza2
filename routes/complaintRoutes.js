@@ -6,7 +6,7 @@ import {
     desestimarDenuncias,
     denunciarComentario,
     verDenunciasComentariosAutor,
-    borrarComentarioDenunciado
+    eliminarComentario,
 } from '../controller/complaintController.js';
 import { requerirAutenticacion } from '../middleware/authMiddleware.js';
 import { requerirValidador } from '../middleware/adminMiddleware.js';
@@ -24,7 +24,7 @@ router.post('/admin/denuncia/desestimar', requerirValidador, desestimarDenuncias
 // Denuncias de comentarios
 router.post('/denunciar/comentario', requerirAutenticacion, denunciarComentario);
 router.get('/mis-denuncias-comentarios', requerirAutenticacion, verDenunciasComentariosAutor);
-router.post('/comentario/borrar-moderado', requerirAutenticacion, borrarComentarioDenunciado);
+router.post('/comentario/eliminar', requerirAutenticacion, eliminarComentario);
 
 
 export default router;

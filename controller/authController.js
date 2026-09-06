@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { user } from '../models/user.js'; 
 
-//REGISTRO DE USUARIOS
+// REGISTRO DE USUARIOS
 
 export const registrarUsuario = async (req, res) => {
     try {
@@ -10,23 +10,27 @@ export const registrarUsuario = async (req, res) => {
         // Validamos duplicados en la base de datos
         const usuarioExiste = await user.findOne({ where: { email } });
         if (usuarioExiste) {
-            return res.render('auth/signup', { error: 'El correo electronico ya esta registrado' });
+            return res.render('auth/signup', { error: 'El correo electrónico ya está registrado' });
         }
 
         // Encriptamos la contraseña
         const hashedPassword = await bcrypt.hash(contrasenia, 10);
 
-        //  Insertamos en la base de datos 
+        // Insertamos en la base de datos con los valores requeridos por la lógica de suspensión
         await user.create({
             username: usuario,       
             email: email,           
-            password: hashedPassword 
+            password: hashedPassword,
+            state: true,                         
+            role: 'user',                        
+            number_publications_removed: 0,      
+            offer: false
         });
 
         return res.redirect('/auth/login');
 
     } catch (error) {
-        console.error(" Error crítico en el proceso de registro:", error);
+        console.error("Error crítico en el proceso de registro:", error);
         return res.status(500).send("Error interno al intentar registrarse.");
     }
 };

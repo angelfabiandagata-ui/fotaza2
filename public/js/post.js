@@ -25,16 +25,13 @@ const actualizarContenidoImagen = (index) => {
     const imgActiva = window.listaImagenes ? window.listaImagenes[index] : null;
     if (!imgActiva) return;
 
-    // Sincronizamos los inputs hidden para que los formularios apunten a la foto correcta
     if (hiddenRatingId) hiddenRatingId.value = imgActiva.id;
     if (hiddenCommentId) hiddenCommentId.value = imgActiva.id;
 
-    // Actualizamos contadores y promedios en la interfaz
     if (photoCounter) photoCounter.textContent = `Imagen ${index + 1} de ${window.listaImagenes.length}`;
     if (currentRating) currentRating.textContent = `⭐ ${imgActiva.average_assessment || '0.0'}`;
     if (currentVotes) currentVotes.textContent = `(${imgActiva.number_assessments || 0} votos)`;
 
-    // Limpiamos y redibujamos la caja de comentarios de la imagen específica
     if (commentsBox) {
         commentsBox.innerHTML = '';
 
@@ -42,38 +39,56 @@ const actualizarContenidoImagen = (index) => {
             imgActiva.comentarios.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'comment-item';
-                div.style = 'display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; font-size: 0.85rem;';
+                div.id = `comment-node-${c.id}`;
+                div.style = 'display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 0.85rem; border-bottom: 1px solid #f0f0f0; padding-bottom: 6px;';
 
                 const fechaFormateada = c.date ? new Date(c.date).toLocaleDateString('es-AR') : '';
                 const autor = c.user ? c.user.username : (c.usuario || `Usuario #${c.user_id}`);
 
-                // Parseo numérico estricto para evitar errores por tipos string vs number
                 const currentId = window.currentUserId ? Number(window.currentUserId) : null;
                 const authorId = window.postAuthorId ? Number(window.postAuthorId) : null;
                 const commentUserId = Number(c.user_id);
 
-                //Se denuncian comentarios que NO son del autor del post
+                // Reglas de visibilidad
                 const esComentarioDelAutorPost = Boolean(authorId && commentUserId === authorId);
                 const esMiPropioComentario = Boolean(currentId && commentUserId === currentId);
+                const esDuenioDelPost = Boolean(currentId && currentId === authorId);
+
+                // Denunciar: usuario logueado, no es su post y no es su propio comentario
                 const puedeDenunciar = Boolean(currentId && !esComentarioDelAutorPost && !esMiPropioComentario);
 
+                // Borrar: el que escribió el comentario O el dueño de la publicación
+                const puedeBorrar = Boolean(currentId && (esMiPropioComentario || esDuenioDelPost));
+
                 div.innerHTML = `
-                    <div class="comment-main" style="flex-grow: 1;">
+                    <div class="comment-main" style="flex-grow: 1; padding-right: 8px;">
                         <strong class="comment-user" style="color: #333; margin-right: 6px;">${autor}:</strong>
                         <span class="comment-text" style="color: #555;">${c.content || c.texto}</span>
                         <div style="font-size: 0.75rem; color: #999; margin-top: 2px;">${fechaFormateada}</div>
                     </div>
-                    ${puedeDenunciar ? `
-                        <button 
-                            type="button"
-                            class="btn-denunciar-comentario" 
-                            data-comment-id="${c.id}" 
-                            title="Denunciar comentario"
-                            style="background: transparent; border: none; cursor: pointer; opacity: 0.6; font-size: 0.85rem; padding: 2px 4px; transition: opacity 0.2s;"
-                            onmouseover="this.style.opacity='1'"
-                            onmouseout="this.style.opacity='0.6'"
-                        >🚩</button>
-                    ` : ''}
+                    <div class="comment-actions" style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        ${puedeDenunciar ? `
+                            <button 
+                                type="button"
+                                class="btn-denunciar-comentario" 
+                                data-comment-id="${c.id}" 
+                                title="Denunciar comentario"
+                                style="background: transparent; border: none; cursor: pointer; font-size: 0.85rem; padding: 0; line-height: 1;"
+                            >🚩</button>
+                        ` : ''}
+
+                        ${puedeBorrar ? `
+                            <button 
+                                type="button"
+                                class="btn-borrar-comentario" 
+                                data-comment-id="${c.id}" 
+                                title="Eliminar comentario"
+                                style="background: transparent; border: none; cursor: pointer; font-size: 0.85rem; padding: 0; line-height: 1; opacity: 0.7; transition: opacity 0.2s;"
+                                onmouseover="this.style.opacity='1'"
+                                onmouseout="this.style.opacity='0.7'"
+                            >🗑️</button>
+                        ` : ''}
+                    </div>
                 `;
                 commentsBox.appendChild(div);
             });
@@ -304,6 +319,49 @@ if (commentsBox) {
         const commentId = btn.getAttribute('data-comment-id');
         if (hiddenCommentInput) hiddenCommentInput.value = commentId;
         if (modalDenunciaComentario) modalDenunciaComentario.style.display = 'flex';
+    });
+}
+
+if (commentsBox) {
+    commentsBox.addEventListener('click', async (e) => {
+        const btnDelete = e.target.closest('.btn-borrar-comentario');
+        if (!btnDelete) return;
+
+        const commentId = btnDelete.getAttribute('data-comment-id');
+        if (!confirm("¿Seguro que deseas eliminar este comentario?")) return;
+
+        try {
+            const res = await fetch('/comentario/eliminar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commentId })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                crearToast("Comentario eliminado.", "success");
+
+                // Quitamos el comentario del array local de memoria
+                if (window.listaImagenes && window.listaImagenes[currentIndex]) {
+                    window.listaImagenes[currentIndex].comentarios = 
+                        window.listaImagenes[currentIndex].comentarios.filter(c => c.id != commentId);
+                }
+
+                // Removemos el nodo visualmente
+                const nodo = document.querySelector(`#comment-node-${commentId}`);
+                if (nodo) nodo.remove();
+
+                // Si no quedaron comentarios, mostramos el texto de vacío
+                if (commentsBox.children.length === 0) {
+                    commentsBox.innerHTML = '<p class="no-comments-text" style="color: #999; font-size: 0.85rem; text-align: center; margin: 15px 0;">No hay comentarios en esta imagen aún.</p>';
+                }
+            } else {
+                crearToast(data.message || "Error al eliminar comentario.", "error");
+            }
+        } catch (err) {
+            console.error("Error al eliminar comentario:", err);
+            crearToast("Error de conexión.", "error");
+        }
     });
 }
 

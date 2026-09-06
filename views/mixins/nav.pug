@@ -9,6 +9,10 @@ mixin nav(userLogueado)
           a.navbar-item(href='/explorar') Explorar
         
         //- Evaluamos dinámicamente si el usuario está en la sesión
+        if userLogueado && userLogueado.role === 'admin'
+          li
+            a.navbar-item(href='/admin/moderacion') Moderación
+
         if userLogueado
           li
             a.navbar-item(href='/perfil') Mi Perfil

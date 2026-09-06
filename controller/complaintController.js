@@ -74,7 +74,7 @@ export const panelValidador = async (req, res) => {
 
         // Filtramos aquellas imágenes que efectivamente tengan más de 3 denuncias
         const listaTrabajo = publicacionesEnRevision.filter(p => 
-            p.images.some(img => img.denuncias && img.denuncias.length > 3)
+            p.images.some(img => img.denuncias && img.denuncias.length > 2)
         );
 
         res.render('admin/moderacion', {
@@ -222,37 +222,48 @@ export const verDenunciasComentariosAutor = async (req, res) => {
         console.error("Error al cargar panel de denuncias de comentarios:", error);
         res.status(500).send("Error al cargar denuncias.");
     }
-};
+};  
 
-// Acción del autor: Borrar el comentario denunciado
-export const borrarComentarioDenunciado = async (req, res) => {
+export const eliminarComentario = async (req, res) => {
     try {
         const { commentId } = req.body;
-        const userId = req.session.user.id;
+        const currentUserId = req.session.user ? req.session.user.id : null;
 
-        const com = await comment.findByPk(commentId, {
+        if (!currentUserId) {
+            return res.status(401).json({ success: false, message: "No autorizado" });
+        }
+
+        // Buscamos el comentario incluyendo la imagen y la publicación para validar permisos
+        const comentario = await comment.findByPk(commentId, {
             include: [{
                 model: image,
                 include: [{ model: publication }]
             }]
         });
 
-        if (!com) {
-            return res.status(404).json({ success: false, message: "Comentario no encontrado" });
+        if (!comentario) {
+            return res.status(404).json({ success: false, message: "El comentario no existe" });
         }
 
-        // Validar que quien borra sea el dueño del post
-        if (com.image.publication.user_id !== userId) {
-            return res.status(403).json({ success: false, message: "No tenés permiso para moderar este comentario" });
+        const autorComentario = comentario.user_id;
+        const duenioPost = comentario.image && comentario.image.publication 
+            ? comentario.image.publication.user_id 
+            : null;
+
+        // Permiso: solo el autor del comentario O el dueño del post pueden borrarlo
+        if (currentUserId !== autorComentario && currentUserId !== duenioPost) {
+            return res.status(403).json({ success: false, message: "No tienes permiso para eliminar este comentario" });
         }
 
-        // Eliminamos las denuncias asociadas y el comentario
+        // Eliminamos primero las denuncias asociadas a este comentario para evitar errores de clave foránea
         await complaint_comment.destroy({ where: { comment_id: commentId } });
-        await com.destroy();
+
+        // Eliminamos el comentario
+        await comentario.destroy();
 
         return res.json({ success: true, message: "Comentario eliminado correctamente" });
     } catch (error) {
-        console.error("Error al borrar comentario:", error);
-        return res.status(500).json({ success: false, message: "Error al borrar comentario" });
+        console.error("Error al eliminar comentario:", error);
+        return res.status(500).json({ success: false, message: "Error interno al eliminar comentario" });
     }
 };
