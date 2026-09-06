@@ -23,7 +23,7 @@ router.get('/post/new', requerirAutenticacion, formularioNuevaPublicacion);
 router.post('/post/new', requerirAutenticacion, crearPublicacion);
 
 // Visualización del detalle del carrusel 
-router.get('/post/show/:id', requerirAutenticacion, verDetallePublicacion);
+router.get('/post/show/:id', verDetallePublicacion);
 
 
 

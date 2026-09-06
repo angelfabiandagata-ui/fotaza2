@@ -1,0 +1,11 @@
+extends ../layout.pug
+
+block content
+  .container(style="max-width: 600px; margin: 60px auto; text-align: center; padding: 30px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;")
+    h2(style="color: #333;") 🔒 Contenido Protegido
+    h4(style="color: #666; margin-top: 10px;") #{title}
+    p(style="color: #777; margin: 20px 0;") #{mensaje}
+    
+    div(style="display: flex; justify-content: center; gap: 15px; margin-top: 25px;")
+      a.btn(href="/login" style="padding: 10px 20px; background: #007bff; color: white; border-radius: 4px; text-decoration: none; font-weight: bold;") Iniciar Sesión
+      a.btn(href="/signup" style="padding: 10px 20px; background: #6c757d; color: white; border-radius: 4px; text-decoration: none; font-weight: bold;") Registrarse

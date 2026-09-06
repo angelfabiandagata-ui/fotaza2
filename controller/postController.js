@@ -115,29 +115,32 @@ export const crearPublicacion = async (req, res) => {
 
 //  VER DETALLE DE UNA PUBLICACIÓN
 
+// controllers/postController.js
+
 export const verDetallePublicacion = async (req, res) => {
     try {
-        const { id } = req.params;
+        const postId = req.params.id;
+        const usuarioLogueado = req.session ? req.session.user : null;
 
-        if (isNaN(id) || id.includes('.')) {
-            return res.status(404).send("Recurso no válido");
-        }
+        // Condición, si estas logueado ves todas las fotos, si no, solo las públicas
+        const filtroImagenes = usuarioLogueado ? {} : { copyright: false };
 
-        // Traemos todos los datos de la publicación 
-        const post = await publication.findByPk(id, {
+        const post = await publication.findByPk(postId, {
             include: [
                 {
                     model: image,
                     as: 'images',
+                    where: filtroImagenes,
+                    required: false, // Si no hay fotos públicas, no rompe la consulta del post
                     include: [
-                        { 
-                            model: comment, 
-                            as: 'comentarios', 
-                            include: [{ model: user, attributes: ['username'] }] 
+                        {
+                            model: comment,
+                            as: 'comentarios',
+                            include: [{ model: user, attributes: ['id', 'username'] }]
                         },
-                        { 
-                            model: assessment, 
-                            as: 'valoraciones' 
+                        {
+                            model: assessment,
+                            as: 'valoraciones'
                         }
                     ]
                 },
@@ -148,24 +151,30 @@ export const verDetallePublicacion = async (req, res) => {
                 {
                     model: user,
                     as: 'usuarioCreador',
-                    attributes: ['id', 'username'] 
+                    attributes: ['id', 'username']
                 }
             ]
-        }); 
+        });
 
         if (!post) {
             return res.status(404).send("Publicación no encontrada");
         }
 
-        // Control de relación de seguimiento
+        // Si es usuario anónimo y la publicación no contiene ninguna foto pública
+        if (!usuarioLogueado && (!post.images || post.images.length === 0)) {
+            return res.render('post/post-privado', {
+                title: post.title,
+                mensaje: "Esta publicación contiene únicamente fotos protegidas por derechos de autor. Inicia sesión para verlas"
+            });
+        }
+
         let yaLoSigue = false;
         let esSuPropioPost = false;
 
-        if (req.session && req.session.user) {
-            const userIdLogueado = req.session.user.id;
+        if (usuarioLogueado) {
+            const userIdLogueado = usuarioLogueado.id;
             esSuPropioPost = post.user_id === userIdLogueado;
 
-            // Solo consulta a la base de datos si el post pertenece a otra persona
             if (!esSuPropioPost) {
                 const seguimiento = await follower.findOne({
                     where: {
@@ -177,21 +186,18 @@ export const verDetallePublicacion = async (req, res) => {
             }
         }
 
-        // Serializamos las instancias para pasarlas limpias a la vista.
-        const imagenesDetalladas = post.images.map(img => img.toJSON());
-
-        return res.render('post/post', {
-            publicacion: post.get({ plain: true }),
-            imagenesDetalladas,
-            etiquetas: post.etiquetas ? post.etiquetas.map(t => t.get({ plain: true })) : [],
-            esSuPropioPost,
+        res.render('post/post', {
+            publicacion: post,
+            imagenesDetalladas: post.images || [],
+            etiquetas: post.etiquetas || [],
             yaLoSigue,
-            userLogueado: req.session.user || null
+            esSuPropioPost,
+            userLogueado: usuarioLogueado
         });
 
     } catch (error) {
-        console.error("Error al traer el detalle: ", error);
-        return res.status(500).send("Error al cargar la publicacion");
+        console.error("Error al obtener la publicación:", error);
+        res.status(500).send("Error interno del servidor");
     }
 };
 
