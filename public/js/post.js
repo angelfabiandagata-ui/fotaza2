@@ -1,5 +1,4 @@
 // CAPTURA DE ELEMENTOS DEL DOM
-
 const slides = document.querySelectorAll('.slide-wrapper'); 
 const btnPrev = document.querySelector('#prev-slide');
 const btnNext = document.querySelector('#next-slide');
@@ -23,7 +22,7 @@ let currentIndex = 0; // Indice de la foto activa actual
 // FUNCIONES DE CONTROL DEL CARRUSEL Y SINCRONIZACIÓN
 
 const actualizarContenidoImagen = (index) => {
-    const imgActiva = window.listaImagenes[index];
+    const imgActiva = window.listaImagenes ? window.listaImagenes[index] : null;
     if (!imgActiva) return;
 
     // Sincronizamos los inputs hidden para que los formularios apunten a la foto correcta
@@ -35,7 +34,7 @@ const actualizarContenidoImagen = (index) => {
     if (currentRating) currentRating.textContent = `⭐ ${imgActiva.average_assessment || '0.0'}`;
     if (currentVotes) currentVotes.textContent = `(${imgActiva.number_assessments || 0} votos)`;
 
-    // Limpiamos y redibujamos la caja de comentarios de la imagen especifica
+    // Limpiamos y redibujamos la caja de comentarios de la imagen específica
     if (commentsBox) {
         commentsBox.innerHTML = '';
 
@@ -43,20 +42,43 @@ const actualizarContenidoImagen = (index) => {
             imgActiva.comentarios.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'comment-item';
+                div.style = 'display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; font-size: 0.85rem;';
 
-                // Formato visual de presentación
                 const fechaFormateada = c.date ? new Date(c.date).toLocaleDateString('es-AR') : '';
-                const autor = c.user ? c.user.username : `Usuario #${c.user_id}`;
+                const autor = c.user ? c.user.username : (c.usuario || `Usuario #${c.user_id}`);
+
+                // Parseo numérico estricto para evitar errores por tipos string vs number
+                const currentId = window.currentUserId ? Number(window.currentUserId) : null;
+                const authorId = window.postAuthorId ? Number(window.postAuthorId) : null;
+                const commentUserId = Number(c.user_id);
+
+                //Se denuncian comentarios que NO son del autor del post
+                const esComentarioDelAutorPost = Boolean(authorId && commentUserId === authorId);
+                const esMiPropioComentario = Boolean(currentId && commentUserId === currentId);
+                const puedeDenunciar = Boolean(currentId && !esComentarioDelAutorPost && !esMiPropioComentario);
 
                 div.innerHTML = `
-                    <div class="comment-main">
-                        <strong class="comment-user">${autor}</strong>
-                        <span class="comment-text">${c.content}</span>
+                    <div class="comment-main" style="flex-grow: 1;">
+                        <strong class="comment-user" style="color: #333; margin-right: 6px;">${autor}:</strong>
+                        <span class="comment-text" style="color: #555;">${c.content || c.texto}</span>
+                        <div style="font-size: 0.75rem; color: #999; margin-top: 2px;">${fechaFormateada}</div>
                     </div>
-                    <span class="comment-date">${fechaFormateada}</span>
+                    ${puedeDenunciar ? `
+                        <button 
+                            type="button"
+                            class="btn-denunciar-comentario" 
+                            data-comment-id="${c.id}" 
+                            title="Denunciar comentario"
+                            style="background: transparent; border: none; cursor: pointer; opacity: 0.6; font-size: 0.85rem; padding: 2px 4px; transition: opacity 0.2s;"
+                            onmouseover="this.style.opacity='1'"
+                            onmouseout="this.style.opacity='0.6'"
+                        >🚩</button>
+                    ` : ''}
                 `;
                 commentsBox.appendChild(div);
             });
+        } else {
+            commentsBox.innerHTML = '<p class="no-comments-text" style="color: #999; font-size: 0.85rem; text-align: center; margin: 15px 0;">No hay comentarios en esta imagen aún.</p>';
         }
     }
 };
@@ -64,28 +86,21 @@ const actualizarContenidoImagen = (index) => {
 const cambiarSlide = (nuevoIndice) => {
     if (slides.length === 0) return;
 
-    // Ocultamos el wrapper actual
     slides[currentIndex].style.display = 'none';
 
-    // Calculamos el nuevo indice respetando extremos del carrusel
     currentIndex = nuevoIndice;
     if (currentIndex >= slides.length) currentIndex = 0;
     if (currentIndex < 0) currentIndex = slides.length - 1;
 
-    // Mostramos el nuevo wrapper activo
     slides[currentIndex].style.display = 'block';
-
-    // Hidratamos los datos de la nueva imagen activa
     actualizarContenidoImagen(currentIndex);
 };
 
-// Asignamos los eventos de clics a las flechas del carrusel
+// Navegación de carrusel
 if (btnNext) btnNext.addEventListener('click', () => cambiarSlide(currentIndex + 1));
 if (btnPrev) btnPrev.addEventListener('click', () => cambiarSlide(currentIndex - 1));
 
-
-// ENVÍO ASÍNCRONICO DE COMENTARIOS
-
+// PUBLICAR COMENTARIOS
 if (formComment) {
     formComment.addEventListener('submit', async (e) => {
         e.preventDefault(); 
@@ -107,32 +122,20 @@ if (formComment) {
                 inputCommentText.value = '';
                 const fechaHoy = new Date().toLocaleDateString('es-AR');
 
-                // Agregamos el comentario al DOM
-                const nuevoDiv = document.createElement('div');
-                nuevoDiv.className = 'comment-item';
-                nuevoDiv.innerHTML = `
-                    <div class="comment-main">
-                        <strong class="comment-user">${resultado.username}</strong>
-                        <span class="comment-text">${textoComentario}</span>
-                    </div>
-                    <span class="comment-date">${fechaHoy}</span>
-                `;
-                
-                if (commentsBox.querySelector('.no-comments-text')) {
-                    commentsBox.innerHTML = '';
-                }
-                commentsBox.appendChild(nuevoDiv);
-                
-                // Lo persistimos en el array de memoria por si cambia de foto y vuelve
+                // Persistir en memoria local
                 if (window.listaImagenes && window.listaImagenes[currentIndex]) {
                     window.listaImagenes[currentIndex].comentarios.push({ 
-                        usuario: resultado.username, 
-                        texto: textoComentario, 
-                        fecha: fechaHoy 
+                        id: resultado.commentId || Date.now(),
+                        user_id: window.currentUserId,
+                        user: { username: resultado.username },
+                        content: textoComentario,
+                        date: new Date()
                     });
                 }
+
+                actualizarContenidoImagen(currentIndex);
             } else {
-                 crearToast("No se pudo publicar tu comentario.", "error");
+                crearToast("No se pudo publicar tu comentario.", "error");
             }
         } catch (error) {
             crearToast("Error de conexión al publicar el comentario", "error");
@@ -140,9 +143,7 @@ if (formComment) {
     });
 }
 
-
-// ENVIO ASINCRONICO DE VALORACIONES 
-
+// VALORACIONES
 if (formRating) {
     formRating.addEventListener('submit', async (e) => {
         e.preventDefault(); 
@@ -162,9 +163,8 @@ if (formRating) {
             const resultado = await response.json();
 
             if (resultado.success) {
-                crearToast("¡Voto registrado con exito!", "success");
+                crearToast("¡Voto registrado con éxito!", "success");
                 
-                // Actualizamos la interfaz en caliente con el nuevo promedio y cantidad de votos
                 if (currentRating) currentRating.textContent = `⭐ ${resultado.nuevoPromedio}`;
                 if (currentVotes) currentVotes.textContent = `(${resultado.nuevaCantidad} votos)`;
                 
@@ -176,64 +176,13 @@ if (formRating) {
                 crearToast(resultado.message || "No se pudo registrar el voto", "error");
             }
         } catch (error) {
-            console.error("Error de red al enviar la valoracion:", error);
+            console.error("Error de red al enviar la valoración:", error);
             crearToast("Error de conexión al votar", "error");
         }
     });
 }
 
-
-// INICIALIZACION AUTOMATICA Y DELEGACION (FOLLOW)
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.listaImagenes && window.listaImagenes.length > 0) {
-        slides.forEach((slide, i) => {
-            slide.style.display = i === 0 ? 'block' : 'none';
-        });
-        actualizarContenidoImagen(0);
-    }
-});
-
-document.addEventListener('click', async (e) => {
-    if (e.target && e.target.id === 'btn-follow') {
-        e.preventDefault();
-        
-        const btnFollow = e.target;
-        const creatorId = btnFollow.getAttribute('data-creator-id');
-
-        if (!creatorId) return;
-
-        try {
-            // URL sincronizada bajo el prefijo /post
-            const response = await fetch('/follow', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ creatorId: creatorId })
-            });
-
-            const resultado = await response.json();
-
-            if (resultado.success) {
-                if (resultado.siguiendo) {
-                    btnFollow.textContent = 'Siguiendo';
-                    btnFollow.style.backgroundColor = '#fff';
-                    btnFollow.style.color = '#007bff';
-                } else {
-                    btnFollow.textContent = 'Seguir';
-                    btnFollow.style.backgroundColor = '#007bff';
-                    btnFollow.style.color = '#fff';
-                }
-            } else {
-                crearToast(resultado.message || "No se pudo cambiar el estado de seguimiento", "error");
-            }
-        } catch (error) {
-            console.error("Error de red al intentar procesar el follow:", error);
-            crearToast("Error de conexión al seguir al usuario", "error");
-        }
-    }
-});
-
-
+// TOGGLE COMENTARIOS
 const btnToggleComments = document.querySelector('#btn-toggle-comments');
 const footerCommentBox = document.querySelector('#footer-comment-box');
 const commentsClosedMsg = document.querySelector('#comments-closed-msg');
@@ -252,12 +201,12 @@ if (btnToggleComments) {
             if (data.success) {
                 if (data.comments_allowed) {
                     btnToggleComments.textContent = 'Cerrar comentarios';
-                    footerCommentBox.style.display = 'block';
-                    commentsClosedMsg.style.display = 'none';
+                    if (footerCommentBox) footerCommentBox.style.display = 'block';
+                    if (commentsClosedMsg) commentsClosedMsg.style.display = 'none';
                 } else {
                     btnToggleComments.textContent = 'Abrir comentarios';
-                    footerCommentBox.style.display = 'none';
-                    commentsClosedMsg.style.display = 'block';
+                    if (footerCommentBox) footerCommentBox.style.display = 'none';
+                    if (commentsClosedMsg) commentsClosedMsg.style.display = 'block';
                 }
                 crearToast(data.message, "success");
             } else {
@@ -270,7 +219,7 @@ if (btnToggleComments) {
     });
 }
 
-// Botón "Me interesa" (solo visible si no es el propio post y el usuario está logueado)
+// BOTÓN "ME INTERESA"
 const btnInteres = document.querySelector('#btn-interes');
 if (btnInteres) {
     btnInteres.addEventListener('click', async () => {
@@ -297,18 +246,153 @@ if (btnInteres) {
     });
 }
 
-// Función para crear un alerta flotante (toast) de forma dinámica
+// DENUNCIA DE IMÁGENES
+const btnAbrirDenuncia = document.querySelector('#btn-abrir-denuncia');
+const modalDenuncia = document.querySelector('#modal-denuncia');
+const btnCancelarDenuncia = document.querySelector('#btn-cancelar-denuncia');
+const formDenuncia = document.querySelector('#form-denuncia');
+
+if (btnAbrirDenuncia) {
+    btnAbrirDenuncia.addEventListener('click', () => {
+        if (modalDenuncia) modalDenuncia.style.display = 'flex';
+    });
+}
+
+if (btnCancelarDenuncia) {
+    btnCancelarDenuncia.addEventListener('click', () => {
+        if (modalDenuncia) modalDenuncia.style.display = 'none';
+    });
+}
+
+if (formDenuncia) {
+    formDenuncia.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const idFotoActiva = hiddenRatingId ? hiddenRatingId.value : null;
+        const reason = document.querySelector('#select-reason').value;
+        const description = document.querySelector('#text-justification').value;
+
+        try {
+            const res = await fetch('/denunciar/imagen', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageId: idFotoActiva, reason, description })
+            });
+            const data = await res.json();
+
+            modalDenuncia.style.display = 'none';
+            formDenuncia.reset();
+            crearToast(data.message, data.success ? 'success' : 'error');
+        } catch (error) {
+            console.error(error);
+            crearToast('Error al procesar la denuncia.', 'error');
+        }
+    });
+}
+
+// DENUNCIA DE COMENTARIOS
+const modalDenunciaComentario = document.querySelector('#modal-denuncia-comentario');
+const btnCancelarDenunciaComentario = document.querySelector('#btn-cancelar-denuncia-comentario');
+const formDenunciaComentario = document.querySelector('#form-denuncia-comentario');
+const hiddenCommentInput = document.querySelector('#hidden-comment-id-denuncia');
+
+// Abrir modal al tocar la banderita
+if (commentsBox) {
+    commentsBox.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-denunciar-comentario');
+        if (!btn) return;
+
+        const commentId = btn.getAttribute('data-comment-id');
+        if (hiddenCommentInput) hiddenCommentInput.value = commentId;
+        if (modalDenunciaComentario) modalDenunciaComentario.style.display = 'flex';
+    });
+}
+
+// Cerrar modal de comentario
+if (btnCancelarDenunciaComentario) {
+    btnCancelarDenunciaComentario.addEventListener('click', () => {
+        if (modalDenunciaComentario) modalDenunciaComentario.style.display = 'none';
+    });
+}
+
+// Enviar denuncia de comentario
+if (formDenunciaComentario) {
+    formDenunciaComentario.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const commentId = hiddenCommentInput ? hiddenCommentInput.value : null;
+        const reason = document.querySelector('#select-reason-comment').value;
+        const description = document.querySelector('#text-justification-comment').value;
+
+        try {
+            const res = await fetch('/denunciar/comentario', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commentId, reason, description })
+            });
+            const data = await res.json();
+
+            if (modalDenunciaComentario) modalDenunciaComentario.style.display = 'none';
+            formDenunciaComentario.reset();
+            crearToast(data.message, data.success ? 'success' : 'error');
+        } catch (error) {
+            console.error(error);
+            crearToast('Error al procesar la denuncia del comentario.', 'error');
+        }
+    });
+}
+
+// BOTÓN FOLLOW Y CARGA INICIAL
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.listaImagenes && window.listaImagenes.length > 0) {
+        slides.forEach((slide, i) => {
+            slide.style.display = i === 0 ? 'block' : 'none';
+        });
+        actualizarContenidoImagen(0);
+    }
+});
+
+document.addEventListener('click', async (e) => {
+    if (e.target && e.target.id === 'btn-follow') {
+        e.preventDefault();
+        const btnFollow = e.target;
+        const creatorId = btnFollow.getAttribute('data-creator-id');
+        if (!creatorId) return;
+
+        try {
+            const response = await fetch('/follow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ creatorId: creatorId })
+            });
+            const resultado = await response.json();
+
+            if (resultado.success) {
+                if (resultado.siguiendo) {
+                    btnFollow.textContent = 'Siguiendo';
+                    btnFollow.style.backgroundColor = '#fff';
+                    btnFollow.style.color = '#007bff';
+                } else {
+                    btnFollow.textContent = 'Seguir';
+                    btnFollow.style.backgroundColor = '#007bff';
+                    btnFollow.style.color = '#fff';
+                }
+            } else {
+                crearToast(resultado.message || "No se pudo cambiar el seguimiento", "error");
+            }
+        } catch (error) {
+            console.error("Error al seguir al usuario:", error);
+            crearToast("Error de conexión al seguir", "error");
+        }
+    }
+});
+
 function crearToast(mensaje, tipo = "success") {
     const toast = document.createElement("div");
     toast.classList.add("toast-flotante", tipo);
     toast.innerText = mensaje;
-
     document.body.appendChild(toast);
 
     setTimeout(() => {
         toast.classList.add("fade-out");
-        toast.addEventListener("transitionend", () => {
-            toast.remove();
-        });
+        toast.addEventListener("transitionend", () => toast.remove());
     }, 3000);
 }

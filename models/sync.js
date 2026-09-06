@@ -8,6 +8,8 @@ import {follower} from './follower.js';
 import {user} from './user.js';
 import {assessment} from './assessment.js';
 import { message } from './message.js';
+import { complaint_image } from './complaint_image.js';
+import { complaint_comment } from './complaint_comment.js';
 
 
 
@@ -133,3 +135,33 @@ message.belongsTo(user, {
     foreignKey: 'user_id_receptor', 
     as: 'receptor' 
     });
+
+    // Denuncias de imágenes
+image.hasMany(complaint_image, { 
+    foreignKey: 'image_id', 
+    as: 'denuncias' });
+complaint_image.belongsTo(image, { 
+    foreignKey: 'image_id', 
+    as: 'image' });
+
+user.hasMany(complaint_image, { 
+    foreignKey: 'user_id', 
+    as: 'denuncias_imagenes' });
+complaint_image.belongsTo(user, { 
+    foreignKey: 'user_id', 
+    as: 'denunciante' });
+
+// Denuncias de comentarios
+comment.hasMany(complaint_comment, { 
+    foreignKey: 'comment_id', 
+    as: 'denuncias' });
+complaint_comment.belongsTo(comment, { 
+    foreignKey: 'comment_id', 
+    as: 'comentario' });
+
+user.hasMany(complaint_comment, { 
+    foreignKey: 'user_id', 
+    as: 'denuncias_comentarios' });
+complaint_comment.belongsTo(user, { 
+    foreignKey: 'user_id', 
+    as: 'denunciante' });

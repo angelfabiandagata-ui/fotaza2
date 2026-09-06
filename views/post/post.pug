@@ -3,12 +3,12 @@ extends ../layout.pug
 block content
   .post-detail-container
     
-    //- Carrusel de Fotos (Columna Izquierda)
+    //- Carrusel de Fotos (Columna Izquierda limpia)
     .post-detail-media
       if imagenesDetalladas && imagenesDetalladas.length > 0
         .carousel-slides
           each img, index in imagenesDetalladas
-            .slide-wrapper(data-index=index style=`position: relative; display: ${index === 0 ? 'block' : 'none'};`)
+            .slide-wrapper(data-index=index style=`position: relative; display: ${index === 0 ? 'block' : 'none'}; width: 100%; height: 100%;`)
               img.carousel-img(
                 src=img.url, 
                 alt=publicacion.title, 
@@ -31,64 +31,73 @@ block content
     //- Informacion y Comentarios (Columna Derecha)
     .post-detail-info
       
-      //- Cabecera fija de la Publicacion
+      //- Cabecera de la Publicacion
       .post-info-header
-        .creator-row(style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;")
-          span.creator-name(style="font-weight: bold; color: #555; font-size: 1rem;") 
-            | Creador: #{publicacion.usuarioCreador ? publicacion.usuarioCreador.username : 'Usuario Desconocido'}
+        .creator-row(style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;")
+          span.creator-name(style="font-weight: bold; color: #333; font-size: 1rem;") 
+            | Creador: #{publicacion.usuarioCreador ? publicacion.usuarioCreador.username : 'Usuario'}
 
-        if userLogueado
-              if !esSuPropioPost
-                div(style="display: flex; gap: 8px; align-items: center;")
-                  button#btn-follow(
-                    data-creator-id=publicacion.user_id 
-                    style=`padding: 6px 16px; border-radius: 20px; border: 1px solid #007bff; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; background: ${yaLoSigue ? '#fff' : '#007bff'}; color: ${yaLoSigue ? '#007bff' : '#fff'};`
-                  ) #{yaLoSigue ? 'Siguiendo' : 'Seguir'}
+          if userLogueado
+            if !esSuPropioPost
+              div(style="display: flex; gap: 8px; align-items: center;")
+                button#btn-follow(
+                  data-creator-id=publicacion.user_id 
+                  style=`padding: 5px 14px; border-radius: 20px; border: 1px solid #007bff; font-weight: bold; cursor: pointer; font-size: 0.8rem; background: ${yaLoSigue ? '#fff' : '#007bff'}; color: ${yaLoSigue ? '#007bff' : '#fff'};`
+                ) #{yaLoSigue ? 'Siguiendo' : 'Seguir'}
 
-                  button#btn-interes(
-                    style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 20px; font-weight: bold; font-size: 0.85rem; cursor: pointer;"
-                  ) 🛒 Me interesa
-              else
-                button#btn-toggle-comments(
-                  data-post-id=publicacion.id
-                  style="padding: 6px 12px; border-radius: 4px; border: 1px solid #6c757d; background: #f8f9fa; color: #333; cursor: pointer; font-size: 0.8rem; font-weight: 600;"
-                ) #{publicacion.comments_allowed ? 'Cerrar comentarios' : 'Abrir comentarios'}
+                button#btn-interes(
+                  style="padding: 5px 12px; background-color: #28a745; color: white; border: none; border-radius: 20px; font-weight: bold; font-size: 0.8rem; cursor: pointer;"
+                ) Me interesa
+            else
+              button#btn-toggle-comments(
+                data-post-id=publicacion.id
+                style="padding: 5px 10px; border-radius: 4px; border: 1px solid #ced4da; background: #f8f9fa; color: #495057; cursor: pointer; font-size: 0.75rem; font-weight: 600;"
+              ) #{publicacion.comments_allowed ? 'Cerrar comentarios' : 'Abrir comentarios'}
 
         h3.post-info-title #{publicacion.title}
-        p.post-info-desc #{publicacion.description}
+        if publicacion.description
+          p.post-info-desc(style="color: #666; margin: 6px 0 10px 0; font-size: 0.9rem;") #{publicacion.description}
         
         - const listaTags = etiquetas || publicacion.etiquetas
         if listaTags && listaTags.length > 0
-          .post-info-tags(style="display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 15px 0;")
+          .post-info-tags(style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;")
             each tag in listaTags
-              span.badge-tag(style="background-color: #e3f2fd; color: #0d6efd; padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 500; text-transform: lowercase;") #{'#' + tag.name}
+              span.badge-tag(style="background-color: #e3f2fd; color: #0d6efd; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500;") #{'#' + tag.name}
 
-        span#photo-counter.photo-counter-text Imagen 1 de #{imagenesDetalladas.length}
+        //- Barra inferior de estado: Contador de foto a la izquierda y Denuncia a la derecha
+        .photo-status-bar(style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;")
+          span#photo-counter.photo-counter-text(style="color: #007bff; font-weight: 600; font-size: 0.85rem;") Imagen 1 de #{imagenesDetalladas.length}
+          
+          if userLogueado && !esSuPropioPost
+            button#btn-abrir-denuncia(
+              style="background: transparent; border: none; color: #dc3545; cursor: pointer; font-size: 0.75rem; font-weight: 600; padding: 0;"
+            ) 🚩 Denunciar imagen
 
       //- Seccion de Valoracion Dinamica
-      .post-info-rating
-        .rating-display
-          span.rating-label Valoración de esta foto: 
-          span#current-rating ⭐ 0.0
-          span#current-votes  (0 votos)
-      if userLogueado
-        form#form-rating.rating-form
-          input#hidden-image-id-rating(type="hidden" name="imageId")
-          span.rating-prompt Puntuar foto:
-          select#select-rating.rating-select
-            option(value="1") 1 ⭐
-            option(value="2") 2 ⭐
-            option(value="3") 3 ⭐
-            option(value="4") 4 ⭐
-            option(value="5") 5 ⭐
-          button(type="submit").btn-rating-submit Votar
-      else
-        p(style="font-size: 0.8rem; color: #888; margin-top: 8px;") 
-          a(href="/auth/login" style="color: #007bff; text-decoration: none;") Inicia sesión
-          |  para puntuar esta imagen.    
+      .post-info-rating(style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;")
+        .rating-display(style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 0.85rem;")
+          span.rating-label Valoración:
+          span#current-rating(style="font-weight: bold;") ⭐ 0.0
+          span#current-votes(style="color: #777; font-size: 0.8rem;") (0 votos)
+        
+        if userLogueado
+          form#form-rating.rating-form(style="display: flex; align-items: center; gap: 6px;")
+            input#hidden-image-id-rating(type="hidden" name="imageId")
+            span.rating-prompt(style="font-size: 0.8rem; color: #555;") Puntuar:
+            select#select-rating.rating-select(style="padding: 2px 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid #ced4da;")
+              option(value="1") 1 ⭐
+              option(value="2") 2 ⭐
+              option(value="3") 3 ⭐
+              option(value="4") 4 ⭐
+              option(value="5") 5 ⭐
+            button(type="submit" style="padding: 2px 8px; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer;").btn-rating-submit Votar
+        else
+          p(style="font-size: 0.8rem; color: #888; margin: 4px 0 0 0;") 
+            a(href="/auth/login" style="color: #007bff; text-decoration: none;") Inicia sesión
+            |  para puntuar esta imagen
 
       //- Lista de Comentarios
-      .post-info-comments#comments-box
+      .post-info-comments#comments-box(style="flex-grow: 1; overflow-y: auto; max-height: 220px; margin-bottom: 10px;")
 
       //- Formulario para Comentar
       if userLogueado
@@ -98,14 +107,56 @@ block content
             input#input-comment-text(type="text", placeholder="Añade un comentario a esta foto...", required).comment-input
             button(type="submit").btn-comment-submit Publicar
       else
-        p(style="padding: 10px; font-size: 0.85rem; color: #888; text-align: center; border-top: 1px solid #efefef;")
+        p(style="padding: 8px; font-size: 0.8rem; color: #888; text-align: center; border-top: 1px solid #eee; margin: 0;")
           a(href="/auth/login" style="color: #007bff; text-decoration: none;") Inicia sesión
-          |  para comentar.
-      //- Aviso de Comentarios Cerrados
-      #comments-closed-msg(style=`display: ${publicacion.comments_allowed ? 'none' : 'block'}; padding: 12px; color: #888; font-style: italic; font-size: 0.9rem; text-align: center; border-top: 1px solid #efefef;`)
-        | Comentarios cerrados por el autor.
+          |  para comentar
 
+      //- Aviso de Comentarios Cerrados
+      #comments-closed-msg(style=`display: ${publicacion.comments_allowed ? 'none' : 'block'}; padding: 8px; color: #888; font-style: italic; font-size: 0.8rem; text-align: center; border-top: 1px solid #eee;`)
+        | Comentarios cerrados por el autor
+
+  //- Modal de Denuncia imagen
+  #modal-denuncia(style="display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center;")
+    .modal-box(style="background: #fff; padding: 20px; border-radius: 8px; width: 360px; max-width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2);")
+      h4(style="margin: 0 0 12px 0; color: #333; font-size: 1.1rem;") Denunciar imagen
+      form#form-denuncia
+        label(style="display: block; font-size: 0.8rem; color: #555; margin-bottom: 4px;") Motivo:
+        select#select-reason(required style="width: 100%; padding: 6px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px;")
+          option(value="Contenido Inapropiado") Contenido Inapropiado
+          option(value="Violación de Derechos de Autor") Violación de Derechos de Autor
+          option(value="Spam / Publicidad") Spam / Publicidad
+          option(value="Violencia o Acoso") Violencia o Acoso
+        
+        label(style="display: block; font-size: 0.8rem; color: #555; margin-bottom: 4px;") Justificación:
+        textarea#text-justification(rows="3" required placeholder="Describe el motivo..." style="width: 100%; padding: 6px; box-sizing: border-box; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;")
+        
+        div(style="display: flex; justify-content: flex-end; gap: 8px;")
+          button#btn-cancelar-denuncia(type="button" style="padding: 6px 12px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; font-size: 0.8rem;") Cancelar
+          button(type="submit" style="padding: 6px 12px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;") Enviar denuncia
+
+  //- Modal Denuncia Comentario
+  #modal-denuncia-comentario(style="display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center;")
+    .modal-box(style="background: #fff; padding: 20px; border-radius: 8px; width: 360px; max-width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2);")
+      h4(style="margin: 0 0 12px 0; color: #333; font-size: 1.1rem;") Denunciar comentario
+      form#form-denuncia-comentario
+        input#hidden-comment-id-denuncia(type="hidden" name="commentId")
+        
+        label(style="display: block; font-size: 0.8rem; color: #555; margin-bottom: 4px;") Motivo:
+        select#select-reason-comment(required style="width: 100%; padding: 6px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px;")
+          option(value="Falta de respeto / Insultos") Falta de respeto / Insultos
+          option(value="Spam / Publicidad indeseada") Spam / Publicidad indeseada
+          option(value="Contenido engañoso") Contenido engañoso
+          option(value="Acoso o discriminación") Acoso o discriminación
+        
+        label(style="display: block; font-size: 0.8rem; color: #555; margin-bottom: 4px;") Justificación:
+        textarea#text-justification-comment(rows="3" required placeholder="Describe por qué reportas este comentario..." style="width: 100%; padding: 6px; box-sizing: border-box; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;")
+        
+        div(style="display: flex; justify-content: flex-end; gap: 8px;")
+          button#btn-cancelar-denuncia-comentario(type="button" style="padding: 6px 12px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; font-size: 0.8rem;") Cancelar
+          button(type="submit" style="padding: 6px 12px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;") Reportar
   script.
     window.listaImagenes = !{JSON.stringify(imagenesDetalladas)};
+    window.postAuthorId = #{publicacion.user_id};
+    window.currentUserId = #{userLogueado ? userLogueado.id : 'null'};
 
   script(src="/js/post.js")

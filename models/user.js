@@ -67,7 +67,14 @@ user.init(
             defaultValue: false,
         },
         offer:{ type: DataTypes.BOOLEAN, 
-            allowNull: true }
+            allowNull: true
+        },
+        role: {
+            type: DataTypes.ENUM('user', 'admin'),
+            defaultValue: 'user',
+            allowNull: false
+        },
+
     },
     {
         sequelize,

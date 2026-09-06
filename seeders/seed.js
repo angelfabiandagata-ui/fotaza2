@@ -20,7 +20,8 @@ async function seed() {
         password: hashAdmin, 
         email: "admin@gmail.com",
         state: true,
-        offer: false
+        offer: false,
+        role: 'admin'
       },
       {
         id: 21,
@@ -28,7 +29,8 @@ async function seed() {
         password: hashUser, 
         email: "userPrueba@gmail.com",
         state: true,
-        offer: false
+        offer: false,
+        role: 'user'
       }
     ]);
 
