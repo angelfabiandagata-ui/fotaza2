@@ -4,7 +4,7 @@ block content
   .profile-container(style="max-width: 950px; margin: 30px auto; padding: 20px;")
     
     //- Cabecera de la colección
-    .header-coleccion(style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 25px;")
+    .header-coleccion(style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;")
       div
         a(href="/perfil" style="color: #007bff; text-decoration: none; font-size: 0.85rem; font-weight: bold;") ← Volver a mi perfil
         h2(style="margin: 8px 0 4px 0; color: #333;") 📁 #{coleccion.title}
@@ -13,21 +13,111 @@ block content
         if coleccion.category
           span(style="margin-left: 8px; font-size: 0.8rem; color: #888;") Categoría: #{coleccion.category}
       
-      div(style="text-align: right; color: #666; font-size: 0.9rem;")
-        strong #{coleccion.publications ? coleccion.publications.length : 0} 
-        |  publicaciones guardadas
+      div(style="display: flex; align-items: center; gap: 15px;")
+        span(style="color: #666; font-size: 0.9rem;")
+          strong#contador-fotos #{coleccion.publications ? coleccion.publications.length : 0} 
+          |  fotos guardadas
+        
+        //- Solo el dueño puede eliminar la colección
+        if userLogueado && userLogueado.id === coleccion.user_id
+          button#btn-eliminar-coleccion(
+            type="button" 
+            data-col-id=coleccion.id 
+            style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 500;"
+          ) 🗑️ Eliminar Colección
 
     //- Grilla de fotos de la colección
-    if !coleccion.publications || coleccion.publications.length === 0
-      div(style="text-align: center; padding: 50px 20px; color: #888;")
-        p No hay fotos guardadas en esta colección todavía.
-        a(href="/" style="color: #007bff; text-decoration: none; font-weight: bold;") Explorar publicaciones
-    else
-      .gallery-grid(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;")
+    #contenedor-vacio(style= (coleccion.publications && coleccion.publications.length > 0) ? "display: none;" : "text-align: center; padding: 50px 20px; color: #888;")
+      p No hay fotos guardadas en esta colección todavía
+      a(href="/" style="color: #007bff; text-decoration: none; font-weight: bold;") Explorar publicaciones
+
+    if coleccion.publications && coleccion.publications.length > 0
+      .gallery-grid#grid-coleccion(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;")
         each post in coleccion.publications
-          .gallery-item(style="border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: #000;")
+          .gallery-item(id=`item-post-${post.id}` style="position: relative; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: #000;")
+            
+            //- Botón para quitar de la colección
+            if userLogueado && userLogueado.id === coleccion.user_id
+              button.btn-quitar-post(
+                type="button" 
+                data-post-id=post.id 
+                data-col-id=coleccion.id 
+                title="Quitar de la colección"
+                style="position: absolute; top: 8px; right: 8px; z-index: 10; background: rgba(220, 53, 69, 0.85); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; transition: 0.2s;"
+              ) ✕
+
             a(href=`/post/show/${post.id}`)
               if post.images && post.images.length > 0
                 img(src=post.images[0].url, alt=post.title style="width: 100%; height: 180px; object-fit: cover; display: block;")
               else
                 img(src="/images/default-placeholder.png", alt="Sin imagen" style="width: 100%; height: 180px; object-fit: cover; display: block;")
+
+  script.
+    //  Quitar foto de la colección
+    const gridColeccion = document.querySelector('#grid-coleccion');
+    if (gridColeccion) {
+      gridColeccion.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-quitar-post');
+        if (!btn) return;
+
+        const postId = btn.getAttribute('data-post-id');
+        const collectionId = btn.getAttribute('data-col-id');
+
+        if (!confirm("¿Deseas quitar esta publicación de la colección?")) return;
+
+        try {
+          const res = await fetch('/colecciones/remover-post', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ collectionId, postId })
+          });
+
+          const data = await res.json();
+          if (data.success) {
+            // Quitamos el nodo del DOM
+            const nodo = document.querySelector(`#item-post-${postId}`);
+            if (nodo) nodo.remove();
+
+            // Actualizamos contador
+            const contador = document.querySelector('#contador-fotos');
+            if (contador) {
+              let cant = parseInt(contador.innerText) - 1;
+              contador.innerText = cant >= 0 ? cant : 0;
+              if (cant === 0) {
+                document.querySelector('#contenedor-vacio').style.display = 'block';
+              }
+            }
+          } else {
+            alert(data.message || "Error al quitar");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Error de conexión");
+        }
+      });
+    }
+
+    // Eliminar la colección completa
+    const btnEliminarCol = document.querySelector('#btn-eliminar-coleccion');
+    if (btnEliminarCol) {
+      btnEliminarCol.addEventListener('click', async () => {
+        const colId = btnEliminarCol.getAttribute('data-col-id');
+        if (!confirm("¿Estás seguro de que deseas eliminar esta colección?")) return;
+
+        try {
+          const res = await fetch(`/colecciones/${colId}`, {
+            method: 'DELETE'
+          });
+
+          const data = await res.json();
+          if (data.success) {
+            window.location.href = '/perfil';
+          } else {
+            alert(data.message || "No se pudo eliminar la colección");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Error al comunicarse con el servidor");
+        }
+      });
+    }

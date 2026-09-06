@@ -71,7 +71,10 @@ export const obtenerMisColecciones = async (req, res) => {
             where: { user_id: userId },
             include: [{
                 model: publication,
-                include: [{ model: image }]
+                include: [{
+                    model: image,
+                    as: 'images' 
+                }]
             }]
         });
 
@@ -93,7 +96,7 @@ export const verDetalleColeccion = async (req, res) => {
                 model: publication,
                 include: [{
                     model: image,
-                    as: 'images'
+                    as: 'images' 
                 }]
             }]
         });
@@ -119,5 +122,68 @@ export const verDetalleColeccion = async (req, res) => {
     } catch (error) {
         console.error("Error al obtener detalle de colección:", error);
         return res.status(500).send("Error interno del servidor al cargar la colección.");
+    }
+};
+
+// QUITAR UNA PUBLICACIÓN DE LA COLECCIÓN
+export const removerPublicacionDeColeccion = async (req, res) => {
+    try {
+        const { collectionId, postId } = req.body;
+        const userId = req.session.user.id;
+
+        // Validamos que la colección pertenezca al usuario logueado
+        const col = await collection.findOne({
+            where: { id: collectionId, user_id: userId }
+        });
+
+        if (!col) {
+            return res.status(403).json({ success: false, message: "No tienes permiso para modificar esta colección" });
+        }
+
+        // Eliminamos el vínculo de la tabla intermedia
+        const resultado = await collectionPublication.destroy({
+            where: {
+                collection_id: collectionId,
+                post_id: postId
+            }
+        });
+
+        if (resultado > 0) {
+            return res.json({ success: true, message: "Publicación eliminada de la colección" });
+        } else {
+            return res.status(404).json({ success: false, message: "La publicación no estaba en esta colección" });
+        }
+    } catch (error) {
+        console.error("Error al quitar post de colección:", error);
+        return res.status(500).json({ success: false, message: "Error interno al procesar la solicitud" });
+    }
+};
+
+// ELIMINAR LA COLECCIÓN COMPLETA
+export const eliminarColeccion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.session.user.id;
+
+        const col = await collection.findOne({
+            where: { id, user_id: userId }
+        });
+
+        if (!col) {
+            return res.status(404).json({ success: false, message: "Colección no encontrada o no autorizada" });
+        }
+
+        // Limpiamos los vínculos de la tabla intermedia primero
+        await collectionPublication.destroy({
+            where: { collection_id: id }
+        });
+
+        // Eliminamos la colección
+        await col.destroy();
+
+        return res.json({ success: true, message: "Colección eliminada correctamente" });
+    } catch (error) {
+        console.error("Error al eliminar colección:", error);
+        return res.status(500).json({ success: false, message: "Error interno al eliminar la colección" });
     }
 };
