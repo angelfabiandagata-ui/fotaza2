@@ -10,7 +10,7 @@ import {assessment} from './assessment.js';
 import { message } from './message.js';
 import { complaint_image } from './complaint_image.js';
 import { complaint_comment } from './complaint_comment.js';
-
+import { collectionPublication } from './collectionPublication.js';
 
 
 // To create a One-To-One relationship, the hasOne and belongsTo associations are used together;
@@ -31,19 +31,17 @@ user.hasMany(publication, {
 
 
 //colection y user a publication (n - m)
-publication.belongsToMany(user, { 
-    through: collection, 
-    foreignKey: 'post_id', 
-    otherKey: 'user_id',
-    as: 'usuariosQueMeGuardaron'
-});
+collection.belongsToMany(publication, { 
+    through: collectionPublication, 
+    foreignKey: 'collection_id' });
+publication.belongsToMany(collection, { 
+    through: collectionPublication, 
+    foreignKey: 'post_id' });
 
-user.belongsToMany(publication, { 
-    through: collection, 
-    foreignKey: 'user_id', 
-    otherKey: 'post_id',
-    as: 'misColecciones'
-});
+user.hasMany(collection, { 
+    foreignKey: 'user_id' });
+collection.belongsTo(user, 
+    { foreignKey: 'user_id' });
 
 
 //publication a image (1 - n)

@@ -443,6 +443,108 @@ document.addEventListener('click', async (e) => {
     }
 });
 
+// CONTROL DEL MODAL DE COLECCIONES
+const btnAbrirModalCol = document.querySelector('#btn-abrir-modal-coleccion');
+const modalCol = document.querySelector('#modal-colecciones');
+const btnCancelarModalCol = document.querySelector('#btn-cancelar-modal-col');
+const selectMisColecciones = document.querySelector('#select-mis-colecciones');
+const formGuardarColeccion = document.querySelector('#form-guardar-coleccion');
+const formNuevaColRapida = document.querySelector('#form-nueva-coleccion-rapida');
+
+// Cargar colecciones del usuario y abrir modal
+if (btnAbrirModalCol) {
+    btnAbrirModalCol.addEventListener('click', async () => {
+        modalCol.style.display = 'flex';
+        selectMisColecciones.innerHTML = '<option value="" disabled selected>Cargando...</option>';
+
+        try {
+            const res = await fetch('/colecciones/mis-colecciones');
+            const data = await res.json();
+
+            if (data.success && data.colecciones.length > 0) {
+                selectMisColecciones.innerHTML = data.colecciones.map(c => 
+                    `<option value="${c.id}">${c.title} (${c.public ? 'Pública' : 'Privada'})</option>`
+                ).join('');
+            } else {
+                selectMisColecciones.innerHTML = '<option value="" disabled selected>No tienes colecciones aún</option>';
+            }
+        } catch (error) {
+            console.error(error);
+            selectMisColecciones.innerHTML = '<option value="" disabled selected>Error al cargar colecciones</option>';
+        }
+    });
+}
+
+if (btnCancelarModalCol) {
+    btnCancelarModalCol.addEventListener('click', () => {
+        modalCol.style.display = 'none';
+    });
+}
+
+// Guardar post en la colección elegida
+if (formGuardarColeccion) {
+    formGuardarColeccion.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const collectionId = selectMisColecciones.value;
+        const postId = document.querySelector('#coleccion-post-id').value;
+
+        if (!collectionId) return;
+
+        try {
+            const res = await fetch('/colecciones/agregar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ collectionId, postId })
+            });
+            const data = await res.json();
+
+            modalCol.style.display = 'none';
+            crearToast(data.message, data.success ? 'success' : 'error');
+        } catch (err) {
+            console.error(err);
+            crearToast('Error al guardar en la colección', 'error');
+        }
+    });
+}
+
+// Crear colección en el mismo modal
+if (formNuevaColRapida) {
+    formNuevaColRapida.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.querySelector('#input-nuevo-titulo-col').value;
+        const isPublic = document.querySelector('#check-col-publica').checked;
+
+        try {
+            const res = await fetch('/colecciones/crear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, isPublic })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                crearToast("Colección creada", "success");
+                // Insertamos la nueva opción y la seleccionamos automáticamente
+                const nuevaOpcion = document.createElement('option');
+                nuevaOpcion.value = data.collection.id;
+                nuevaOpcion.textContent = `${data.collection.title} (${data.collection.public ? 'Pública' : 'Privada'})`;
+                nuevaOpcion.selected = true;
+
+                if (selectMisColecciones.querySelector('option[disabled]')) {
+                    selectMisColecciones.innerHTML = '';
+                }
+                selectMisColecciones.appendChild(nuevaOpcion);
+                formNuevaColRapida.reset();
+            } else {
+                crearToast(data.message || 'Error al crear', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            crearToast('Error de conexión', 'error');
+        }
+    });
+}
+
 function crearToast(mensaje, tipo = "success") {
     const toast = document.createElement("div");
     toast.classList.add("toast-flotante", tipo);

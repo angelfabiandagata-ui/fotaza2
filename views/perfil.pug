@@ -2,21 +2,17 @@ extends layout.pug
 
 block content
   .profile-container
-    //Cabecera del Perfil 
+    // Cabecera del Perfil 
     header.profile-header
       .profile-avatar-container
         if userLogueado && usuario && userLogueado.id === usuario.id
           label.avatar-changer(for="file-avatar-input" style="cursor: pointer; position: relative; display: block;")
-            
             if usuario.profile_photo 
               img#profile-avatar-img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
             else
               img#profile-avatar-img(src="/images/fotazaavatar.jpg", alt="Avatar por defecto", class="profile-avatar")
-            
             .avatar-overlay Cambiar foto
-          
           input#file-avatar-input(type="file" accept="image/*" style="display: none;")
-        
         else
           if usuario && usuario.profile_photo
             img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
@@ -38,11 +34,9 @@ block content
           span #[strong #{seguidoresCount || 0}] seguidores
           span #[strong #{seguidosCount || 0}] seguidos
 
-        
-
     hr.profile-divider
 
-    //- 🖼️ 2. Grilla de Publicaciones (Mosaico Cronológico)
+    //- 2. Grilla de Publicaciones (Mosaico Cronológico)
     section.profile-gallery
       if publicaciones && publicaciones.length > 0
         .gallery-grid
@@ -59,6 +53,27 @@ block content
           p Sin publicaciones
           if userLogueado && usuario && userLogueado.id === usuario.id
             a.btn-upload(href="/post/new") Subir mi primera foto
+
+    //- 3. Sección de Colecciones (fuera de la galería de fotos)
+    section.seccion-colecciones(style="margin-top: 35px;")
+      h3(style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px;") 📁 Mis Colecciones
+
+      if !colecciones || colecciones.length === 0
+        p(style="color: #777; font-size: 0.9rem;") Aún no has creado ninguna colección
+      else
+        .grid-colecciones(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;")
+          each col in colecciones
+            .card-coleccion(style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04);")
+              if col.publications && col.publications.length > 0 && col.publications[0].images && col.publications[0].images.length > 0
+                img(src=col.publications[0].images[0].url style="width: 100%; height: 120px; object-fit: cover;")
+              else
+                div(style="width: 100%; height: 120px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999; font-size: 1.5rem;") 📁
+
+              div(style="padding: 10px;")
+                h4(style="margin: 0 0 5px 0; font-size: 1rem; color: #333;") #{col.title}
+                span(style="font-size: 0.75rem; color: #666; display: block; margin-bottom: 8px;")
+                  | #{col.publications ? col.publications.length : 0} publicaciones | #{col.public ? 'Pública' : '🔒 Privada'}
+                a(href=`/colecciones/${col.id}` style="display: inline-block; font-size: 0.8rem; color: #007bff; text-decoration: none; font-weight: bold;") Ver contenido →
 
   script.
     const fileInput = document.querySelector('#file-avatar-input');

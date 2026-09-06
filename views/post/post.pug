@@ -91,10 +91,15 @@ block content
               option(value="4") 4 ⭐
               option(value="5") 5 ⭐
             button(type="submit" style="padding: 2px 8px; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer;").btn-rating-submit Votar
+
+            button#btn-abrir-modal-coleccion(
+            type="button" 
+            style="background: #17a2b8; color: white; border: none; padding: 4px 4px; border-radius: 6px; cursor: pointer; font-weight: 500; margin-left: 20px;"
+          ) 📁 Guardar en Colección 
         else
           p(style="font-size: 0.8rem; color: #888; margin: 4px 0 0 0;") 
             a(href="/auth/login" style="color: #007bff; text-decoration: none;") Inicia sesión
-            |  para puntuar esta imagen
+            |  para puntuar esta imagen 
 
       //- Lista de Comentarios
       .post-info-comments#comments-box(style="flex-grow: 1; overflow-y: auto; max-height: 220px; margin-bottom: 10px;")
@@ -154,6 +159,36 @@ block content
         div(style="display: flex; justify-content: flex-end; gap: 8px;")
           button#btn-cancelar-denuncia-comentario(type="button" style="padding: 6px 12px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; font-size: 0.8rem;") Cancelar
           button(type="submit" style="padding: 6px 12px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;") Reportar
+
+  //- Modal para coleccion
+  #modal-colecciones(style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;")
+    .modal-content(style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 420px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);")
+      h3(style="margin-top: 0; color: #333; font-size: 1.2rem;") Guardar publicación
+      p(style="font-size: 0.85rem; color: #666; margin-bottom: 15px;") Selecciona una colección existente o crea una nueva.
+
+      //- Selector de colecciones existentes
+      form#form-guardar-coleccion
+        input#coleccion-post-id(type="hidden" value=publicacion.id)
+        .form-group(style="margin-bottom: 15px;")
+          label(style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;") Mis Colecciones:
+          select#select-mis-colecciones(required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;")
+            option(value="" disabled selected) Cargando colecciones...
+        
+        div(style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 15px;")
+          button#btn-cancelar-modal-col(type="button" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;") Cancelar
+          button(type="submit" style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;") Guardar
+
+      hr(style="border: 0; border-top: 1px solid #eee; margin: 15px 0;")
+
+      //- Formulario rápido para crear una nueva carpeta
+      details
+        summary(style="font-size: 0.85rem; color: #007bff; cursor: pointer; font-weight: 500;") + Crear nueva colección
+        form#form-nueva-coleccion-rapida(style="margin-top: 10px;")
+          input#input-nuevo-titulo-col(type="text" placeholder="Ej: Paisajes, Favoritos..." required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px; box-sizing: border-box;")
+          label(style="font-size: 0.8rem; color: #555; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;")
+            input#check-col-publica(type="checkbox")
+            | Colección pública
+          button(type="submit" style="width: 100%; padding: 6px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;") Crear y seleccionar
   script.
     window.listaImagenes = !{JSON.stringify(imagenesDetalladas)};
     window.postAuthorId = #{publicacion.user_id};

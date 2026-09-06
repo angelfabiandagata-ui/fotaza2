@@ -12,6 +12,7 @@ import homeRoutes from './routes/homeRoutes.js';
 import { manejoDeErrores } from './middleware/errorMiddleware.js';
 import messageRoutes from './routes/messageRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
+import collectionRoutes from './routes/collectionRoutes.js';
 
 // CONSTANTES
 const PORT = process.env.PORT || 3000;
@@ -55,7 +56,8 @@ app.use('/auth', authRoutes);
 app.use('/perfil', perfilRoutes);   
 app.use('/', postRoutes);           
 app.use('/', messageRoutes);
-app.use('/', complaintRoutes)
+app.use('/', complaintRoutes);
+app.use('/', collectionRoutes);
 
 //Manejo de errores
 app.use(manejoDeErrores);
