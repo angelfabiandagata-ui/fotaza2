@@ -32,36 +32,48 @@ export const registrarUsuario = async (req, res) => {
 };
 
 
-//  INICIO DE SESIoN (LOGIN)
+// INICIO DE SESIÓN (LOGIN)
 
 export const iniciarSesion = async (req, res) => {
     try {
-        // verificamos que el usuario exista y que la contraseña sea correcta
         const { email, contrasenia } = req.body; 
 
-        // 1Buscamos al usuario por email
+        // 1. Buscamos al usuario por email
         const usuarioEncontrado = await user.findOne({ where: { email } });
         if (!usuarioEncontrado) {
             return res.render('auth/login', { error: 'Credenciales incorrectas' });
         }
 
-        // Comparamos el input 
+        // 2. Verificamos si la cuenta está suspendida/inactiva 
+        if (usuarioEncontrado.state === false) {
+            return res.render('auth/login', { 
+                error: 'Tu cuenta ha sido suspendida por acumulación de sanciones en publicaciones.' 
+            });
+        }
+
+        // 3. Comparamos la contraseña
         const passwordCorrecto = await bcrypt.compare(contrasenia, usuarioEncontrado.password);
         if (!passwordCorrecto) {
             return res.render('auth/login', { error: 'Credenciales incorrectas' });
         }
 
-        // ÉXITO
+        // 4. Guardamos la sesión con el ROL incluido
         req.session.user = {
             id: usuarioEncontrado.id,
             username: usuarioEncontrado.username,
-            email: usuarioEncontrado.email
+            email: usuarioEncontrado.email,
+            role: usuarioEncontrado.role 
         };
+
+        // Redirección: si es admin va directo a moderación, si no a explorar
+        if (usuarioEncontrado.role === 'admin') {
+            return res.redirect('/admin/moderacion');
+        }
 
         return res.redirect('/explorar');
     } catch (error) {
         console.error("Error en el proceso de login:", error);
-        return res.status(500).send("Error interno al iniciar sesion");
+        return res.status(500).send("Error interno al iniciar sesión");
     }
 };
 
