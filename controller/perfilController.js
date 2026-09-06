@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { user } from '../models/user.js';
 import { publication } from '../models/publication.js';
 import { image } from '../models/image.js';
@@ -18,43 +19,70 @@ export const mostrarPerfil = async (req, res) => {
             return res.status(404).send("Error: El usuario de la sesión no existe en la DB");
         }
 
-        // Publicaciones propias con imágenes
+        //  Publicaciones propias del usuario
         const misFotosReales = await publication.findAll({
             where: { user_id: userId },
             order: [['createdAt', 'DESC']], 
-            include: [{ 
-                model: image, 
-                as: 'images' 
-            }]
+            include: [{ model: image, as: 'images' }]
         });
 
-        // Colecciones del usuario con publicaciones e imágenes asociadas
+        //  Colecciones del usuario
         const misColecciones = await collection.findAll({
             where: { user_id: userId },
             order: [['createdAt', 'DESC']],
             include: [{
                 model: publication,
-                include: [{ 
-                    model: image, 
-                    as: 'images' 
-                }]
+                include: [{ model: image, as: 'images' }]
             }]
         });
 
-        // Contadores de seguidores y seguidos
+        //  Contadores de seguidores y seguidos
         const cantSeguidores = await follower.count({ where: { followed_id: userId } });
         const cantSeguidos = await follower.count({ where: { follower_id: userId } });
 
-        // Normalización de datos para Pug
+        //  Obtener publicaciones de las cuentas que sigue el usuario
+        // Buscamos a quiénes sigue 
+        const seguidos = await follower.findAll({
+            where: { follower_id: userId },
+            attributes: ['followed_id']
+        });
+
+        const idsSeguidos = seguidos.map(s => s.followed_id);
+
+        let publicacionesSeguidos = [];
+        if (idsSeguidos.length > 0) {
+            publicacionesSeguidos = await publication.findAll({
+                where: {
+                    user_id: { [Op.in]: idsSeguidos }
+                },
+                order: [['createdAt', 'DESC']],
+                include: [
+                    { 
+                model: image, 
+                as: 'images' 
+            },
+            { 
+                model: user, 
+                as: 'usuarioCreador', 
+                attributes: ['id', 'username', 'profile_photo'] 
+            }
+                ],
+                limit: 20 // Traemos las 20 más recientes
+            });
+        }
+
+        // Normalizar objetos planos para Pug
         const usuarioLimpio = usuarioEncontrado.get({ plain: true });
         const publicacionesLimpias = misFotosReales.map(p => p.get({ plain: true }));
         const coleccionesLimpias = misColecciones.map(c => c.get({ plain: true }));
+        const feedSeguidosLimpio = publicacionesSeguidos.map(p => p.get({ plain: true }));
 
         return res.render("perfil", { 
             usuario: usuarioLimpio, 
             userLogueado: req.session.user, 
             publicaciones: publicacionesLimpias,
             colecciones: coleccionesLimpias,
+            publicacionesSeguidos: feedSeguidosLimpio,
             seguidoresCount: cantSeguidores, 
             seguidosCount: cantSeguidos
         });

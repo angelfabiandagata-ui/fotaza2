@@ -75,6 +75,40 @@ block content
                   | #{col.publications ? col.publications.length : 0} publicaciones | #{col.public ? 'Pública' : '🔒 Privada'}
                 a(href=`/colecciones/${col.id}` style="display: inline-block; font-size: 0.8rem; color: #007bff; text-decoration: none; font-weight: bold;") Ver contenido →
 
+    //- 4. Sección: Publicaciones de cuentas que sigues
+    section.seccion-seguidos(style="margin-top: 40px;")
+      h3(style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px;") 👥 Publicaciones de personas que sigues
+
+      if !publicacionesSeguidos || publicacionesSeguidos.length === 0
+        p(style="color: #777; font-size: 0.9rem; margin-top: 10px;")
+          | No hay publicaciones recientes de usuarios que sigues o aún no sigues a nadie
+          |  #[a(href="/" style="color: #007bff; text-decoration: none; font-weight: bold;") ¡Explora la comunidad!]
+      else
+        .grid-seguidos(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; margin-top: 15px;")
+          each post in publicacionesSeguidos
+            .card-post-seguido(style="border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;")
+              
+              //- Header de la tarjeta con usuario y avatar
+              .card-user-header(style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #f0f0f0;")
+                img(
+                  src=(post.usuarioCreador && post.usuarioCreador.profile_photo) ? post.usuarioCreador.profile_photo : '/images/fotazaavatar.jpg' 
+                  style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;"
+                )
+                span(style="font-size: 0.85rem; font-weight: 600; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;")
+                  | #{post.usuarioCreador ? post.usuarioCreador.username : 'Usuario'}
+
+              //- Imagen de la publicación
+              a(href=`/post/show/${post.id}` style="display: block; width: 100%; height: 160px; background: #f8f9fa;")
+                if post.images && post.images.length > 0
+                  img(src=post.images[0].url alt=post.title style="width: 100%; height: 100%; object-fit: cover; display: block;")
+                else
+                  img(src="/images/default-placeholder.png" alt="Sin imagen" style="width: 100%; height: 100%; object-fit: cover; display: block;")
+
+              //- Título o pie de foto
+              if post.title
+                div(style="padding: 8px 10px; font-size: 0.8rem; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;")
+                  | #{post.title}
+
   script.
     const fileInput = document.querySelector('#file-avatar-input');
     const avatarImg = document.querySelector('#profile-avatar-img');
