@@ -3,7 +3,7 @@ extends layout.pug
 block content
   .explore-container(style="max-width: 1200px; margin: 0 auto; padding: 20px;")
     
-    //MOTOR DE BÚSQUEDA Y FILTROS COMBINABLES
+    //- MOTOR DE BÚSQUEDA Y FILTROS COMBINABLES
     .search-engine-box(style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);")
       h2(style="margin-top: 0; color: #333;") 🔍 Descubrir Contenido
       
@@ -12,7 +12,7 @@ block content
         //- Filtro por Palabra Clave
         .form-group(style="flex: 2; min-width: 250px;")
           label(style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem;") Buscar por palabra clave:
-          input(type="text" name="keyword" value=query.keyword placeholder="ej: cordoba, dibujo, tuning..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;")
+          input(type="text" name="keyword" value=query.keyword placeholder="ej: cordoba, paisaje, retrato..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;")
         
         //- Filtro por Etiqueta 
         .form-group(style="flex: 1; min-width: 180px;")
@@ -33,29 +33,48 @@ block content
       if query.keyword || query.tag
         h3(style="color: #555; margin-bottom: 20px;") 📌 Resultados de la búsqueda:
       else
-        h3(style="color: #555; margin-bottom: 20px;") 🔥 Últimas publicaciones globales:
+        h3(style="color: #555; margin-bottom: 20px;") 🔥 Publicaciones más valoradas y populares:
 
       if publicaciones && publicaciones.length > 0
         .gallery-grid(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;")
           each post in publicaciones
-            .gallery-item(style="border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; transition: transform 0.2s;")
+            .gallery-item(style="border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; transition: transform 0.2s; display: flex; flex-direction: column;")
               
-              //- Enlace al detalle del carrusel indexado
-              a(href=`/post/show/${post.id}` style="text-decoration: none; color: inherit;")
-                if post.images && post.images.length > 0
-                  img(src=post.images[0].url alt=post.title style="width: 100%; height: 220px; object-fit: cover; display: block;")
-                else
-                  img(src="/images/default-placeholder.png" style="width: 100%; height: 220px; object-fit: cover; display: block;")
+              //- Header de autor
+              if post.usuarioCreador
+                .card-author(style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #f0f0f0;")
+                  img(
+                    src=post.usuarioCreador.profile_photo || '/images/fotazaavatar.jpg'
+                    alt=post.usuarioCreador.username
+                    style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #e0e0e0;"
+                  )
+                  a(href=`/perfil/${post.usuarioCreador.id}` style="font-size: 0.85rem; font-weight: 600; color: #333; text-decoration: none;") #{post.usuarioCreador.username}
+
+              //- Contenedor de la foto con insignia de puntuación
+              .card-image-wrap(style="position: relative; width: 100%; height: 220px; background: #000;")
+                a(href=`/post/show/${post.id}` style="display: block; width: 100%; height: 100%;")
+                  if post.images && post.images.length > 0
+                    img(src=post.images[0].url alt=post.title style="width: 100%; height: 100%; object-fit: cover; display: block;")
+                  else
+                    img(src="/images/default-placeholder.png" style="width: 100%; height: 100%; object-fit: cover; display: block;")
                 
-                .post-card-body(style="padding: 15px;")
-                  h4(style="margin: 0 0 5px 0; color: #222; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;") #{post.title}
-                  p(style="margin: 0; color: #666; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;") #{post.description}
+                //- Badge de valoración (Promedio y Votos)
+                div(style="position: absolute; bottom: 8px; right: 8px; background: rgba(0, 0, 0, 0.75); color: #fff; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; pointer-events: none;")
+                  span ⭐ #{post.promedioPuntaje > 0 ? post.promedioPuntaje : '-'}
+                  if post.totalVotos > 0
+                    span(style="color: #ccc; font-size: 0.7rem;") (#{post.totalVotos})
+
+              //- Cuerpo de la tarjeta
+              a(href=`/post/show/${post.id}` style="text-decoration: none; color: inherit; flex-grow: 1; display: flex; flex-direction: column;")
+                .post-card-body(style="padding: 14px; flex-grow: 1;")
+                  h4(style="margin: 0 0 5px 0; color: #222; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;") #{post.title || 'Sin título'}
+                  p(style="margin: 0; color: #666; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;") #{post.description || ''}
                   
-                  //- Etiquetas inferiores de la miniatura
+                  //- Etiquetas inferiores
                   if post.etiquetas && post.etiquetas.length > 0
                     .post-card-tags(style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px;")
                       each tag in post.etiquetas
                         span(style="font-size: 0.75rem; color: #007bff; background: #e3f2fd; padding: 2px 6px; border-radius: 10px;") #{'#' + tag.name}
       else
         .no-results(style="text-align: center; padding: 50px; background: #f8f9fa; border-radius: 8px; color: #777;")
-          p  No se encontraron publicaciones que coincidan con los criterios de busqueda
+          p 🚫 No se encontraron publicaciones que coincidan con los criterios de búsqueda.

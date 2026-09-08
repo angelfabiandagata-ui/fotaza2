@@ -4,7 +4,7 @@ block content
   .container(style="max-width: 1000px; margin: 30px auto; padding: 20px;")
     h2(style="color: #333; margin-bottom: 5px;") 🛡️ Panel del Validador de Contenidos
     p(style="color: #666; margin-bottom: 25px; font-size: 0.95rem;")
-      | Publicaciones en lista de trabajo con imágenes que han acumulado más de 3 denuncias de distintos usuarios
+      | Publicaciones en lista de trabajo con imágenes que han acumulado 3 o más denuncias de distintos usuarios
 
     if !publicaciones || publicaciones.length === 0
       div(style="text-align: center; padding: 40px; background: #fff; border-radius: 8px; border: 1px solid #e0e0e0;")
@@ -12,17 +12,33 @@ block content
     else
       each pub in publicaciones
         .card-moderacion(style="background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);")
-          .card-header-mod(style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;")
+          .card-header-mod(style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;")
             div
-              h3(style="margin: 0 0 5px 0; color: #212529;") #{pub.title}
-              span(style="font-size: 0.85rem; color: #6c757d;")
-                | Creador: 
-                strong(style="color: #333;") #{pub.usuarioCreador ? pub.usuarioCreador.username : 'Desconocido'} 
-                | | Bajas acumuladas: #{pub.usuarioCreador ? pub.usuarioCreador.number_publications_removed : 0}/3
-            div(style="display: flex; gap: 10px;")
+              h3(style="margin: 0 0 6px 0; color: #212529;") #{pub.title}
+              div(style="font-size: 0.85rem; color: #6c757d; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;")
+                span Creador: #[strong(style="color: #333;") #{pub.usuarioCreador ? pub.usuarioCreador.username : 'Desconocido'}]
+                span | Bajas acumuladas: #{pub.usuarioCreador ? pub.usuarioCreador.number_publications_removed : 0}/3
+                
+                //- Estado de la Cuenta
+                if pub.usuarioCreador
+                  span.badge-estado-user(
+                    id=`badge-user-${pub.usuarioCreador.id}`
+                    style=`padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: ${pub.usuarioCreador.state !== false ? '#d4edda' : '#f8d7da'}; color: ${pub.usuarioCreador.state !== false ? '#155724' : '#721c24'};`
+                  ) #{pub.usuarioCreador.state !== false ? 'Cuenta Activa' : 'Cuenta Suspendida'}
+
+            //- Acciones sobre la publicación y el usuario
+            div(style="display: flex; gap: 8px; align-items: center;")
+              if pub.usuarioCreador
+                button.btn-toggle-user(
+                  type="button"
+                  data-user-id=pub.usuarioCreador.id
+                  style=`padding: 7px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; transition: 0.2s; background: ${pub.usuarioCreador.state !== false ? '#ffc107' : '#28a745'}; color: ${pub.usuarioCreador.state !== false ? '#212529' : '#fff'};`
+                ) #{pub.usuarioCreador.state !== false ? 'Suspender Cuenta' : 'Reactivar Cuenta'}
+
               button.btn-dar-baja(
+                type="button"
                 data-post-id=pub.id
-                style="padding: 8px 14px; background: #dc3545; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem;"
+                style="padding: 7px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem;"
               ) 🚫 Dar de baja publicación
 
           p(style="color: #555; margin-bottom: 15px; font-size: 0.9rem;") #{pub.description}
@@ -30,14 +46,15 @@ block content
           //- Listado de fotos denunciadas en esta publicación
           .images-reported-list
             each img in pub.images
-              if img.denuncias && img.denuncias.length > 3
+              if img.denuncias && img.denuncias.length >= 3
                 .image-mod-item(style="display: flex; gap: 20px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin-bottom: 15px;")
                   div(style="width: 160px; flex-shrink: 0; text-align: center;")
                     img(src=img.url style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px; border: 1px solid #ccc;")
                     span(style="display: block; font-size: 0.75rem; color: #888; margin-top: 4px;") ID Imagen: #{img.id}
                     button.btn-desestimar(
+                      type="button"
                       data-image-id=img.id
-                      style="margin-top: 8px; padding: 4px 10px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
+                      style="margin-top: 8px; padding: 5px 10px; background: #6c757d; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;"
                     ) Desestimar denuncias
 
                   div(style="flex-grow: 1;")
@@ -50,10 +67,54 @@ block content
                           span(style="color: #666;") #{den.description}
 
   script.
-    // Manejo de eventos 
+    // 1. Alternar estado del usuario (Suspender / Reactivar)
+    document.querySelectorAll('.btn-toggle-user').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const userId = btn.getAttribute('data-user-id');
+        const badge = document.querySelector(`#badge-user-${userId}`);
+        
+        if (!confirm("¿Deseas cambiar el estado de acceso de este usuario?")) return;
+
+        try {
+          const res = await fetch('/admin/usuario/toggle-estado', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            const activo = data.nuevoEstado;
+            
+            // Actualizar botones de este usuario en todas las tarjetas
+            document.querySelectorAll(`.btn-toggle-user[data-user-id="${userId}"]`).forEach(b => {
+              b.innerText = activo ? 'Suspender Cuenta' : 'Reactivar Cuenta';
+              b.style.background = activo ? '#ffc107' : '#28a745';
+              b.style.color = activo ? '#212529' : '#fff';
+            });
+
+            // Actualizar 
+            document.querySelectorAll(`#badge-user-${userId}`).forEach(el => {
+              el.innerText = activo ? 'Cuenta Activa' : 'Cuenta Suspendida';
+              el.style.background = activo ? '#d4edda' : '#f8d7da';
+              el.style.color = activo ? '#155724' : '#721c24';
+            });
+
+            alert(data.message);
+          } else {
+            alert(data.message || 'Error al cambiar estado del usuario');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error de conexión con el servidor');
+        }
+      });
+    });
+
+    // 2. Dar de baja publicación
     document.querySelectorAll('.btn-dar-baja').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const postId = e.target.getAttribute('data-post-id');
+        const postId = btn.getAttribute('data-post-id');
         if (!confirm("¿Confirmas la baja definitiva de esta publicación? Si el autor acumula 3 bajas su cuenta será suspendida.")) return;
 
         try {
@@ -76,9 +137,10 @@ block content
       });
     });
 
+    // 3. Desestimar denuncias de una imagen
     document.querySelectorAll('.btn-desestimar').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const imageId = e.target.getAttribute('data-image-id');
+        const imageId = btn.getAttribute('data-image-id');
         if (!confirm("¿Deseas desestimar las denuncias de esta imagen? La publicación saldrá de la lista de trabajo")) return;
 
         try {

@@ -7,6 +7,7 @@ import {
     denunciarComentario,
     verDenunciasComentariosAutor,
     eliminarComentario,
+    toggleEstadoUsuario
 } from '../controller/complaintController.js';
 import { requerirAutenticacion } from '../middleware/authMiddleware.js';
 import { requerirValidador } from '../middleware/adminMiddleware.js';
@@ -20,6 +21,7 @@ router.post('/denunciar/imagen', requerirAutenticacion, denunciarImagen);
 router.get('/admin/moderacion', requerirValidador, panelValidador);
 router.post('/admin/publicacion/baja', requerirValidador, darDeBajaPublicacion);
 router.post('/admin/denuncia/desestimar', requerirValidador, desestimarDenuncias);
+router.post('/admin/usuario/toggle-estado', requerirAutenticacion, toggleEstadoUsuario);
 
 // Denuncias de comentarios
 router.post('/denunciar/comentario', requerirAutenticacion, denunciarComentario);

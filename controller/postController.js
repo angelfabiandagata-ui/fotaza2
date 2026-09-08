@@ -395,26 +395,27 @@ export const valorarFoto = async (req, res) => {
 };
 
 
-//  MOTOR DE BÚSQUEDA / EXPLORAR CONTENT
-
+// MOTOR DE BÚSQUEDA 
 export const explorarContenido = async (req, res) => {
     try {
-        const { keyword, tag } = req.query; 
+        const { keyword, tag } = req.query;
 
+        // 1. Obtener todas las etiquetas disponibles para los filtros de la vista
         const etiquetasDisponibles = await label.findAll({
             attributes: ['name'],
             group: ['name'],
             order: [['name', 'ASC']]
         });
 
-        let condicionesPublicacion = { state: true }; 
+        // 2. Filtros de búsqueda sobre la publicación
+        let condicionesPublicacion = { state: true };
         let condicionesEtiqueta = {};
 
         if (keyword && keyword.trim() !== '') {
             const termino = `%${keyword.trim()}%`;
             condicionesPublicacion[Op.or] = [
-                { title: { [Op.iLike]: termino } },      
-                { description: { [Op.iLike]: termino } }  
+                { title: { [Op.iLike]: termino } },
+                { description: { [Op.iLike]: termino } }
             ];
         }
 
@@ -422,25 +423,70 @@ export const explorarContenido = async (req, res) => {
             condicionesEtiqueta.name = tag.trim().toLowerCase();
         }
 
+        // 3. Consulta principal con agregaciones de puntuación y ranking
         const publicacionesEncontradas = await publication.findAll({
             where: condicionesPublicacion,
-            order: [['createdAt', 'DESC']], 
+            attributes: [
+                'id',
+                'title',
+                'description',
+                'createdAt',
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('images.valoraciones.score')), 0), 'promedioPuntaje'],
+                [Sequelize.fn('COUNT', Sequelize.col('images.valoraciones.id')), 'totalVotos']
+            ],
             include: [
+                {
+                    model: user,
+                    as: 'usuarioCreador',
+                    attributes: ['id', 'username', 'profile_photo'],
+                    where: { state: true }, // Excluye publicaciones de usuarios suspendidos
+                    required: true
+                },
                 {
                     model: image,
                     as: 'images',
-                    attributes: ['url'] 
+                    attributes: ['id', 'url'],
+                    required: false,
+                    include: [
+                        {
+                            model: assessment,
+                            as: 'valoraciones', 
+                            attributes: []
+                        }
+                    ]
                 },
                 {
                     model: label,
                     as: 'etiquetas',
+                    attributes: ['name'],
                     where: Object.keys(condicionesEtiqueta).length > 0 ? condicionesEtiqueta : null,
-                    required: Object.keys(condicionesEtiqueta).length > 0 
+                    required: Object.keys(condicionesEtiqueta).length > 0
                 }
-            ]
+            ],
+            // Agrupamos por las columnas necesarias en PostgreSQL / SQL estricto
+            group: [
+                'publication.id',
+                'usuarioCreador.id',
+                'images.id',
+                'etiquetas.id'
+            ],
+            // 1° Mejor promedio, 2° Mayor cantidad de votos, 3° Más recientes
+            order: [
+                [Sequelize.literal('"promedioPuntaje"'), 'DESC'],
+                [Sequelize.literal('"totalVotos"'), 'DESC'],
+                ['createdAt', 'DESC']
+            ],
+            subQuery: false
         });
 
-        const publicacionesLimpias = publicacionesEncontradas.map(p => p.get({ plain: true }));
+        // 4. Formatear y limpiar los resultados para Pug
+        const publicacionesLimpias = publicacionesEncontradas.map(p => {
+            const item = p.get({ plain: true });
+            item.promedioPuntaje = parseFloat(item.promedioPuntaje || 0).toFixed(1);
+            item.totalVotos = parseInt(item.totalVotos) || 0;
+            return item;
+        });
+
         const todasLasEtiquetasLimpias = etiquetasDisponibles.map(e => e.get({ plain: true }));
 
         return res.render('explorar', {
@@ -450,11 +496,11 @@ export const explorarContenido = async (req, res) => {
                 keyword: keyword || '',
                 tag: tag || ''
             },
-            userLogueado: req.session.user || null
+            userLogueado: req.session ? req.session.user : null
         });
 
     } catch (error) {
-        console.error(" Error en el motor de busqueda :", error);
+        console.error("Error en el motor de busqueda:", error);
         return res.status(500).send("Error interno en el motor de busqueda");
     }
 };

@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { complaint_image } from '../models/complaint_image.js';
 import { complaint_comment } from '../models/complaint_comment.js';
 import { image } from '../models/image.js';
@@ -32,7 +33,7 @@ export const denunciarImagen = async (req, res) => {
             return res.status(400).json({ success: false, message: "No puedes denunciar tu propia imagen" });
         }
 
-        // 2. Evitar denuncias duplicadas del mismo usuario
+        // 2. Evitar denuncias duplicadas del mismo usuario sobre la misma foto
         const denunciaPrevia = await complaint_image.findOne({
             where: { image_id: imageId, user_id: userId }
         });
@@ -49,49 +50,58 @@ export const denunciarImagen = async (req, res) => {
             description: description.trim()
         });
 
+        // NOTIFICACIÓN INFORMATIVA AL AUTOR: Su imagen fue denunciada
+        try {
+            await crearNotificacion({
+                userId: autorId,
+                senderId: userId,
+                type: 'REPORT_WARNING',
+                message: `Tu imagen en "${foto.publication.title || 'tu publicación'}" recibió una denuncia por "${reason}".`,
+                url: `/post/show/${foto.publication.id}`
+            });
+        } catch (notifErr) {
+            console.error("Error al notificar denuncia preventiva de imagen:", notifErr);
+        }
+
         // 4. Incrementar contador en la publicación
         await publication.increment('number_complaints', { 
             by: 1, 
             where: { id: foto.post_id } 
         });
 
-        // 5. MODERACIÓN AUTOMÁTICA DE LA PUBLICACIÓN (Umbral: 3 denuncias)
+        // 5. MODERACIÓN DE LA PUBLICACIÓN (Umbral: 3 denuncias)
         const postActualizado = await publication.findByPk(foto.post_id, {
-            attributes: ['id', 'title', 'state', 'number_complaints']
+            attributes: ['id', 'title', 'state', 'number_complaints', 'user_id']
         });
 
         if (postActualizado && postActualizado.number_complaints >= 3 && postActualizado.state !== false) {
+            // Damos de baja la publicación
             await publication.update({ state: false }, { where: { id: postActualizado.id } });
 
+            // Incrementamos las publicaciones eliminadas del autor
+            const autor = await user.findByPk(autorId);
+            if (autor) {
+                autor.number_publications_removed = (autor.number_publications_removed || 0) + 1;
+
+                // 6. MODERACIÓN DEL USUARIO: Sólo si acumula 3 PUBLICACIONES dadas de baja
+                if (autor.number_publications_removed >= 3) {
+                    autor.state = false;
+                }
+                await autor.save();
+            }
+
+            // Notificación de baja de la publicación
             try {
                 await crearNotificacion({
                     userId: autorId,
                     senderId: userId,
                     type: 'MODERATION',
-                    message: `Tu publicación "${postActualizado.title || 'Foto'}" fue dada de baja automáticamente tras recibir 3 denuncias.`,
+                    message: `Tu publicación "${postActualizado.title || 'Foto'}" fue dada de baja automáticamente tras recibir 3 denuncias`,
                     url: '/perfil'
                 });
             } catch (notifErr) {
                 console.error("Error al notificar baja de publicación:", notifErr);
             }
-        }
-
-        // 6. MODERACIÓN AUTOMÁTICA DEL USUARIO (Umbral: 3 denuncias recibidas en total)
-        // Contamos todas las denuncias en imágenes pertenecientes a este autor
-        const totalDenunciasUsuario = await complaint_image.count({
-            include: [{
-                model: image,
-                required: true,
-                include: [{
-                    model: publication,
-                    required: true,
-                    where: { user_id: autorId }
-                }]
-            }]
-        });
-
-        if (totalDenunciasUsuario >= 3) {
-            await user.update({ state: false }, { where: { id: autorId } });
         }
 
         return res.json({ success: true, message: "Denuncia registrada correctamente" });
@@ -102,12 +112,15 @@ export const denunciarImagen = async (req, res) => {
     }
 };
 
-// Panel del Validador de Contenidos: Publicaciones con más de 3 denuncias de distintos usuarios
+
 export const panelValidador = async (req, res) => {
     try {
-        // Obtenemos publicaciones con imágenes que tengan más de 3 denuncias
+        // 1. Buscamos publicaciones que tengan al menos 1 o más denuncias registradas
         const publicacionesEnRevision = await publication.findAll({
-            where: { state: true },
+            // Traemos publicaciones que tengan number_complaints >= 3 o hayan sido bajadas
+            where: {
+                number_complaints: { [Op.gte]: 3 } // Umbral de 3 denuncias
+            },
             include: [
                 {
                     model: image,
@@ -117,27 +130,32 @@ export const panelValidador = async (req, res) => {
                         {
                             model: complaint_image,
                             as: 'denuncias',
-                            where: { state: 'pendiente' },
-                            include: [{ model: user, as: 'denunciante', attributes: ['username'] }]
+                            required: false, // para no trabar si el estado no coincide exactamente
+                            include: [{ 
+                                model: user, 
+                                as: 'denunciante', 
+                                attributes: ['username'] 
+                            }]
                         }
                     ]
                 },
                 {
                     model: user,
                     as: 'usuarioCreador',
-                    attributes: ['id', 'username', 'number_publications_removed']
+                    attributes: ['id', 'username', 'number_publications_removed', 'state']
                 }
-            ]
+            ],
+            order: [['updatedAt', 'DESC']]
         });
 
-        // Filtramos aquellas imágenes que efectivamente tengan más de 3 denuncias
-        const listaTrabajo = publicacionesEnRevision.filter(p => 
-            p.images.some(img => img.denuncias && img.denuncias.length > 2)
-        );
+        // Limpiamos los objetos para Pug
+        const listaTrabajo = publicacionesEnRevision.map(p => p.get({ plain: true }));
+
+        console.log(`[MODERACION] Publicaciones encontradas para revisión: ${listaTrabajo.length}`);
 
         res.render('admin/moderacion', {
             publicaciones: listaTrabajo,
-            userLogueado: req.session.user
+            userLogueado: req.session ? req.session.user : null
         });
     } catch (error) {
         console.error("Error al cargar panel validador:", error);
@@ -145,38 +163,6 @@ export const panelValidador = async (req, res) => {
     }
 };
 
-// Acción del Validador: Dar de baja la publicación
-export const darDeBajaPublicacion = async (req, res) => {
-    try {
-        const { postId } = req.body;
-        const post = await publication.findByPk(postId);
-        if (!post) return res.status(404).json({ success: false, message: "Publicación no encontrada" });
-
-        // Ocultamos la publicación
-        post.state = false;
-        await post.save();
-
-        // Incrementamos el contador de publicaciones eliminadas del autor
-        const autor = await user.findByPk(post.user_id);
-        if (autor) {
-            autor.number_publications_removed += 1;
-            
-            // Si el autor tiene 3 o más publicaciones eliminadas, desactivamos su cuenta
-            if (autor.number_publications_removed >= 3) {
-                autor.state = false;
-            }
-            await autor.save();
-        }
-
-        return res.json({ 
-            success: true, 
-            message: "Publicación dada de baja exitosamente" 
-        });
-    } catch (error) {
-        console.error("Error al dar de baja publicación:", error);
-        return res.status(500).json({ success: false, message: "Error al procesar la baja" });
-    }
-};
 
 // Acción del Validador: Desestimar denuncias
 export const desestimarDenuncias = async (req, res) => {
@@ -353,3 +339,87 @@ export const eliminarComentario = async (req, res) => {
     }
 };
 
+export const toggleEstadoUsuario = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const adminId = req.session && req.session.user ? req.session.user.id : null;
+
+        // Evitar que el admin se auto-suspenda
+        if (parseInt(userId) === adminId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "No puedes cambiar el estado de tu propia cuenta de administrador" 
+            });
+        }
+
+        const usuario = await user.findByPk(userId);
+        if (!usuario) {
+            return res.status(404).json({ success: false, message: "Usuario no encontrado" });
+        }
+
+        // Invertimos el estado (true <-> false)
+        const nuevoEstado = !usuario.state;
+        usuario.state = nuevoEstado;
+        await usuario.save();
+
+        // Notificación informativa
+        try {
+            await crearNotificacion({
+                userId: usuario.id,
+                senderId: adminId,
+                type: 'MODERATION',
+                message: nuevoEstado 
+                    ? "Tu cuenta ha sido reactivada por el equipo de moderación" 
+                    : "Tu cuenta ha sido suspendida por un administrador",
+                url: '/perfil'
+            });
+        } catch (notifErr) {
+            console.error("Error al notificar cambio de estado de cuenta:", notifErr);
+        }
+
+        return res.json({
+            success: true,
+            message: `Cuenta ${nuevoEstado ? 'activada' : 'suspendida'} exitosamente.`,
+            nuevoEstado: nuevoEstado
+        });
+
+    } catch (error) {
+        console.error("Error al cambiar estado del usuario:", error);
+        return res.status(500).json({ success: false, message: "Error interno del servidor" });
+    }
+};
+
+// Acción del Validador: Dar de baja la publicación
+export const darDeBajaPublicacion = async (req, res) => {
+    try {
+        const { postId } = req.body;
+        const post = await publication.findByPk(postId);
+        if (!post) {
+            return res.status(404).json({ success: false, message: "Publicación no encontrada" });
+        }
+
+        // Ocultamos la publicación
+        post.state = false;
+        await post.save();
+
+        // Incrementamos el contador de publicaciones eliminadas del autor
+        const autor = await user.findByPk(post.user_id);
+        if (autor) {
+            autor.number_publications_removed = (autor.number_publications_removed || 0) + 1;
+            
+            // Si el autor acumula 3 publicaciones dadas de baja, se suspende la cuenta
+            if (autor.number_publications_removed >= 3) {
+                autor.state = false;
+            }
+            await autor.save();
+        }
+
+        return res.json({ 
+            success: true, 
+            message: "Publicación dada de baja exitosamente" 
+        });
+    } catch (error) {
+        console.error("Error al dar de baja publicación:", error);
+        return res.status(500).json({ success: false, message: "Error al procesar la baja" });
+    }
+};
