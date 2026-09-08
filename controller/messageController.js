@@ -3,19 +3,21 @@ import { message } from '../models/message.js';
 import { user } from '../models/user.js';
 import { image } from '../models/image.js';
 import { publication } from '../models/publication.js';
+import { crearNotificacion } from '../utils/notificationService.js';
 
 // Botón "Me interesa"
 export const manifestarInteres = async (req, res) => {
     try {
         const { imageId } = req.body;
         const remitenteId = req.session.user.id;
+        const remitenteUsername = req.session.user.username || 'Un usuario';
 
         const foto = await image.findByPk(imageId, {
             include: [{ model: publication, as: 'publication' }]
         });
 
-        if (!foto) {
-            return res.status(404).json({ success: false, message: 'Imagen no encontrada' });
+        if (!foto || !foto.publication) {
+            return res.status(404).json({ success: false, message: 'Imagen o publicación no encontrada' });
         }
 
         const autorId = foto.publication.user_id;
@@ -24,7 +26,7 @@ export const manifestarInteres = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No puedes comprar tu propia imagen' });
         }
 
-        // Mensaje automático inicial
+        // Mensaje automático inicial en el chat
         await message.create({
             user_id_emisor: remitenteId,
             user_id_receptor: autorId,
@@ -32,12 +34,31 @@ export const manifestarInteres = async (req, res) => {
             read: false
         });
 
+        // NOTIFICACIÓN AL AUTOR
+        try {
+            const tituloPost = foto.publication.title 
+                ? `"${foto.publication.title}"` 
+                : 'tu imagen';
+
+            await crearNotificacion({
+                userId: autorId,                                      // Destinatario: el autor de la foto
+                senderId: remitenteId,                                // Emisor: quien presionó "Me interesa"
+                type: 'INTEREST',
+                message: `@${remitenteUsername} mostró interés en adquirir ${tituloPost}`,
+                url: `/mensajes?con=${remitenteId}`                   // Enlace directo al chat con el interesado
+            });
+        } catch (notifErr) {
+            console.error('Error al generar notificación de interés:', notifErr);
+            // No interrumpe la respuesta al cliente
+        }
+
         return res.json({ success: true, redirectUrl: `/mensajes?con=${autorId}` });
     } catch (error) {
         console.error('Error al manifestar interés:', error);
         return res.status(500).json({ success: false, message: 'Error interno del servidor' });
     }
 };
+
 
 // Ver bandeja de entrada / chat con otro usuario
 export const verMensajes = async (req, res) => {

@@ -4,6 +4,7 @@ import { image } from '../models/image.js';
 import { publication } from '../models/publication.js';
 import { comment } from '../models/comment.js';
 import { user } from '../models/user.js';
+import { crearNotificacion } from '../utils/notificationService.js';
 
 // Registrar denuncia sobre una imagen
 export const denunciarImagen = async (req, res) => {
@@ -15,7 +16,23 @@ export const denunciarImagen = async (req, res) => {
             return res.status(400).json({ success: false, message: "El motivo y la justificación son obligatorios" });
         }
 
-        // Evitar que el mismo usuario denuncie dos veces la misma imagen
+        // 1. Obtener la imagen y su publicación asociada
+        const foto = await image.findByPk(imageId, {
+            include: [{ model: publication, as: 'publication' }]
+        });
+
+        if (!foto || !foto.publication) {
+            return res.status(404).json({ success: false, message: "Imagen o publicación no encontrada" });
+        }
+
+        const autorId = foto.publication.user_id;
+
+        // Evitar auto-denuncia
+        if (autorId === userId) {
+            return res.status(400).json({ success: false, message: "No puedes denunciar tu propia imagen" });
+        }
+
+        // 2. Evitar denuncias duplicadas del mismo usuario
         const denunciaPrevia = await complaint_image.findOne({
             where: { image_id: imageId, user_id: userId }
         });
@@ -24,20 +41,61 @@ export const denunciarImagen = async (req, res) => {
             return res.status(400).json({ success: false, message: "Ya has enviado una denuncia para esta imagen" });
         }
 
+        // 3. Crear el registro de denuncia
         await complaint_image.create({
-            image_id: imageId,
+            image_id: parseInt(imageId),
             user_id: userId,
             reason,
-            description
+            description: description.trim()
         });
 
-        // Actualizamos contador en la publicacion
-        const foto = await image.findByPk(imageId);
-        if (foto) {
-            await publication.increment('number_complaints', { by: 1, where: { id: foto.post_id } });
+        // 4. Incrementar contador en la publicación
+        await publication.increment('number_complaints', { 
+            by: 1, 
+            where: { id: foto.post_id } 
+        });
+
+        // 5. MODERACIÓN AUTOMÁTICA DE LA PUBLICACIÓN (Umbral: 3 denuncias)
+        const postActualizado = await publication.findByPk(foto.post_id, {
+            attributes: ['id', 'title', 'state', 'number_complaints']
+        });
+
+        if (postActualizado && postActualizado.number_complaints >= 3 && postActualizado.state !== false) {
+            await publication.update({ state: false }, { where: { id: postActualizado.id } });
+
+            try {
+                await crearNotificacion({
+                    userId: autorId,
+                    senderId: userId,
+                    type: 'MODERATION',
+                    message: `Tu publicación "${postActualizado.title || 'Foto'}" fue dada de baja automáticamente tras recibir 3 denuncias.`,
+                    url: '/perfil'
+                });
+            } catch (notifErr) {
+                console.error("Error al notificar baja de publicación:", notifErr);
+            }
+        }
+
+        // 6. MODERACIÓN AUTOMÁTICA DEL USUARIO (Umbral: 3 denuncias recibidas en total)
+        // Contamos todas las denuncias en imágenes pertenecientes a este autor
+        const totalDenunciasUsuario = await complaint_image.count({
+            include: [{
+                model: image,
+                required: true,
+                include: [{
+                    model: publication,
+                    required: true,
+                    where: { user_id: autorId }
+                }]
+            }]
+        });
+
+        if (totalDenunciasUsuario >= 3) {
+            await user.update({ state: false }, { where: { id: autorId } });
         }
 
         return res.json({ success: true, message: "Denuncia registrada correctamente" });
+
     } catch (error) {
         console.error("Error al denunciar imagen:", error);
         return res.status(500).json({ success: false, message: "Error interno del servidor" });
@@ -136,7 +194,7 @@ export const desestimarDenuncias = async (req, res) => {
     }
 };
 
-// Registrar denuncia sobre un comentario
+// Registrar denuncia sobre un comentario con notificación al autor
 export const denunciarComentario = async (req, res) => {
     try {
         const { commentId, reason, description } = req.body;
@@ -146,7 +204,14 @@ export const denunciarComentario = async (req, res) => {
             return res.status(400).json({ success: false, message: "Completá motivo y justificación" });
         }
 
-        const comentario = await comment.findByPk(commentId);
+        // 1. Buscamos el comentario incluyendo la publicación para armar la URL de la notificación
+        const comentario = await comment.findByPk(commentId, {
+            include: [{
+                model: image,
+                include: [{ model: publication }]
+            }]
+        });
+
         if (!comentario) {
             return res.status(404).json({ success: false, message: "Comentario no encontrado" });
         }
@@ -164,13 +229,33 @@ export const denunciarComentario = async (req, res) => {
             return res.status(400).json({ success: false, message: "Ya denunciaste este comentario" });
         }
 
+        // 2. Registrar denuncia
         await complaint_comment.create({
-            comment_id: commentId,
+            comment_id: parseInt(commentId),
             user_id: userId,
             reason,
-            description,
+            description: description.trim(),
             state: 'pendiente'
         });
+
+        // 3. NOTIFICAR AL AUTOR DEL COMENTARIO
+        try {
+            const postId = (comentario.image && comentario.image.publication) 
+                ? comentario.image.publication.id 
+                : null;
+            
+            const urlDestino = postId ? `/post/show/${postId}` : '/perfil';
+
+            await crearNotificacion({
+                userId: comentario.user_id,                       // Destinatario: el autor del comentario
+                senderId: userId,                                 // Emisor: quien denunció
+                type: 'REPORT_WARNING',
+                message: `Un comentario tuyo recibió una denuncia por "${reason}". Podés revisarlo o eliminarlo.`,
+                url: urlDestino
+            });
+        } catch (notifErr) {
+            console.error("Error al notificar denuncia de comentario:", notifErr);
+        }
 
         return res.json({ success: true, message: "Comentario denunciado correctamente" });
     } catch (error) {
@@ -267,3 +352,4 @@ export const eliminarComentario = async (req, res) => {
         return res.status(500).json({ success: false, message: "Error interno al eliminar comentario" });
     }
 };
+
