@@ -7,8 +7,7 @@ import { user } from '../models/user.js';
 import { label } from '../models/label.js';
 import { follower } from '../models/follower.js';
 import { assessment } from '../models/assessment.js';
-
-
+import { crearNotificacion } from '../utils/notificationService.js'; 
 
 //  FORMULARIO NUEVA PUBLICACIÓN
 export const formularioNuevaPublicacion = (req, res) => {
@@ -201,18 +200,38 @@ export const verDetallePublicacion = async (req, res) => {
     }
 };
 
-//  COMENTAR UNA FOTO (ASÍNCRONICO)
-
+// COMENTAR UNA FOTO (ASÍNCRONO)
 export const crearComentarioFoto = async (req, res) => {
     try {
         if (!req.session || !req.session.user) {
-            return res.status(401).json({ success: false, message: "Debes iniciar sesion para comentar" });
+            return res.status(401).json({ success: false, message: "Debes iniciar sesión para comentar" });
         }
 
         const { imageId, text } = req.body; 
         const userIdLogueado = req.session.user.id;
         const usernameLogueado = req.session.user.username;
 
+        if (!text || text.trim() === '') {
+            return res.status(400).json({ success: false, message: "El comentario no puede estar vacío" });
+        }
+
+        // 1. Verificamos primero la foto, la publicación y los permisos
+        const foto = await image.findByPk(imageId, { include: [{ model: publication }] });
+        if (!foto || !foto.publication) {
+            return res.status(404).json({
+                success: false,
+                message: "No se encontró la publicación vinculada a esta imagen"
+            });
+        }
+
+        if (!foto.publication.comments_allowed) {
+            return res.status(403).json({
+                success: false,
+                message: "Los comentarios para esta publicación han sido cerrados por el autor"
+            });
+        }
+
+        // 2. Guardamos el comentario
         await comment.create({
             image_id: parseInt(imageId),
             user_id: userIdLogueado,
@@ -220,12 +239,23 @@ export const crearComentarioFoto = async (req, res) => {
             date: new Date()
         });
 
-        const foto = await image.findByPk(imageId, { include: [{ model: publication }] });
-        if (!foto || !foto.publication.comments_allowed) {
-            return res.status(403).json({
-                success: false,
-                message: "Los comentarios para esta publicación han sido cerrados por el autor."
+        // 3. NOTIFICACIÓN AL AUTOR DE LA PUBLICACIÓN
+        try {
+            const post = foto.publication;
+            const textoCorto = text.trim().length > 35 
+                ? text.trim().substring(0, 32) + '...' 
+                : text.trim();
+
+            await crearNotificacion({
+                userId: post.user_id,                          // Destinatario: autor del post
+                senderId: userIdLogueado,                      // Emisor: quien comentó
+                type: 'COMMENT',
+                message: `@${usernameLogueado} comentó: "${textoCorto}"`,
+                url: `/post/show/${post.id}`
             });
+        } catch (notifErr) {
+            console.error("Error al generar la notificación de comentario:", notifErr);
+            // No interrumpe la respuesta al cliente
         }
 
         return res.json({
@@ -273,16 +303,39 @@ export const toggleComentarios = async (req, res) => {
     }
 };
 
-//  VALORAR/VOTAR UNA FOTO (ASÍNCRONICO)
+// VALORAR/VOTAR UNA FOTO (ASÍNCRONO)
 export const valorarFoto = async (req, res) => {
     try {
         if (!req.session || !req.session.user) {
-            return res.status(401).json({ success: false, message: "Debes iniciar sesion para votar" });
+            return res.status(401).json({ success: false, message: "Debes iniciar sesión para votar" });
         }
 
         const { imageId, rating } = req.body; 
         const userIdLogueado = req.session.user.id;
 
+        // 1. Obtener la imagen junto con la publicación para conocer al autor
+        const fotoInfo = await image.findByPk(imageId, {
+            include: [{
+                model: publication,
+                attributes: ['id', 'user_id', 'title']
+            }]
+        });
+
+        if (!fotoInfo || !fotoInfo.publication) {
+            return res.status(404).json({ success: false, message: "No se encontró la publicación vinculada a esta imagen" });
+        }
+
+        const post = fotoInfo.publication;
+
+        // 2. Bloquear si intenta votar su propia publicación
+        if (post.user_id === userIdLogueado) {
+            return res.json({
+                success: false,
+                message: "No puedes valorar tus propias imágenes"
+            });
+        }
+
+        // 3. Verificar si ya votó previamente
         const votoExistente = await assessment.findOne({
             where: { image_id: imageId, user_id: userIdLogueado }
         });
@@ -294,12 +347,14 @@ export const valorarFoto = async (req, res) => {
             });
         }
 
+        // 4. Registrar la valoración
         await assessment.create({
             image_id: parseInt(imageId),
             user_id: userIdLogueado,
             score: parseFloat(rating)
         });
 
+        // 5. Recalcular cantidad de votos y promedio
         const resultado = await assessment.findOne({
             where: { image_id: imageId },
             attributes: [
@@ -312,6 +367,21 @@ export const valorarFoto = async (req, res) => {
         const cantidadVotos = parseInt(resultado.cantidadVotos) || 0;
         const nuevoPromedio = parseFloat(resultado.promedioReal || 0).toFixed(1);
 
+        // 6. NOTIFICACIÓN AL AUTOR DE LA PUBLICACIÓN
+        try {
+            const emisor = req.session.user.username || "Un usuario";
+
+            await crearNotificacion({
+                userId: post.user_id,
+                senderId: userIdLogueado,
+                type: 'RATING',
+                message: `@${emisor} puntuó tu publicación con ${rating} ⭐`,
+                url: `/post/show/${post.id}`
+            });
+        } catch (notifErr) {
+            console.error("Error al generar la notificación de valoración:", notifErr);
+        }
+
         return res.json({
             success: true,
             nuevoPromedio: nuevoPromedio,
@@ -319,7 +389,7 @@ export const valorarFoto = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(" Error al procesar la valoración relacional:", error);
+        console.error("Error al procesar la valoración relacional:", error);
         return res.status(500).json({ success: false, message: "Error al registrar tu voto" });
     }
 };
@@ -390,48 +460,55 @@ export const explorarContenido = async (req, res) => {
 };
 
 
-//  SEGUIR / DEJAR DE SEGUIR (ASÍNCRONICO)
-
+//  SEGUIR / DEJAR DE SEGUIR (ASÍNCRONO)
 export const toggleSeguirUsuario = async (req, res) => {
     try {
         if (!req.session || !req.session.user) {
-            return res.status(401).json({ success: false, message: "Debes iniciar sesion para seguir usuarios" });
+            return res.status(401).json({ success: false, message: "Debes iniciar sesión para seguir usuarios" });
         }
 
         const { creatorId } = req.body;
         const userIdLogueado = req.session.user.id;
+        const targetId = parseInt(creatorId);
 
-        //No permitimos seguir a uno mismo
-        if (parseInt(creatorId) === userIdLogueado) {
-            return res.json({ success: false, message: "No podes seguirte a vos mismo" });
+        // No permitimos seguirse a uno mismo
+        if (targetId === userIdLogueado) {
+            return res.json({ success: false, message: "No podés seguirte a vos mismo" });
         }
 
         const relacionExiste = await follower.findOne({
             where: { 
                 follower_id: userIdLogueado, 
-                followed_id: parseInt(creatorId) 
+                followed_id: targetId 
             }
         });
 
-        //No permitimos seguir a un mismo usuario más de una vez
         if (relacionExiste) {
-            await follower.destroy({
-                where: {
-                    follower_id: userIdLogueado,
-                    followed_id: parseInt(creatorId)
-                }
-            });
+            // Dejar de seguir 
+            await relacionExiste.destroy();
             return res.json({ success: true, siguiendo: false });
         } else {
+            // Comenzar a seguir 
             await follower.create({
                 follower_id: userIdLogueado,        
-                followed_id: parseInt(creatorId)    
+                followed_id: targetId    
+            });
+
+            // Notificación al usuario seguido
+            const emisorUsername = req.session.user.username || "Alguien";
+            await crearNotificacion({
+                userId: targetId,
+                senderId: userIdLogueado,
+                type: 'FOLLOW',
+                message: `@${emisorUsername} ha comenzado a seguirte`,
+                url: `/perfil/${userIdLogueado}`
             });
             
             return res.json({ success: true, siguiendo: true });
         }
     } catch (error) {
-        console.error("Error al procesar el follow :", error);
+        console.error("Error al procesar el follow:", error);
         return res.status(500).json({ success: false, message: "Error interno de base de datos" });
     }
 };
+

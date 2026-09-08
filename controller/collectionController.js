@@ -2,6 +2,7 @@ import { collection } from '../models/collection.js';
 import { publication } from '../models/publication.js';
 import { image } from '../models/image.js';
 import { collectionPublication } from '../models/collectionPublication.js';
+import { crearNotificacion } from '../utils/notificationService.js';
 
 // Crear colección (ej: "Favoritos", "Paisajes", "Ideas")
 export const crearColeccion = async (req, res) => {
@@ -55,6 +56,28 @@ export const guardarEnColeccion = async (req, res) => {
             collection_id: collectionId,
             post_id: postId
         });
+
+        //NOTIFICACIÓN AL AUTOR ORIGINAL DEL POST
+        try {
+            const postOriginal = await publication.findByPk(postId, {
+                attributes: ['id', 'user_id', 'title']
+            });
+
+            if (postOriginal) {
+                const emisor = req.session.user.username || "Un usuario";
+
+                await crearNotificacion({
+                    userId: postOriginal.user_id,             // Destinatario: creador de la foto
+                    senderId: userId,                         // Emisor: quien la guardó
+                    type: 'COLLECTION',
+                    message: `@${emisor} guardó tu publicación en su colección "${col.title}"`,
+                    url: `/post/show/${postOriginal.id}`      // Enlace directo al post
+                });
+            }
+        } catch (notifErr) {
+            console.error("Error al registrar notificación de colección:", notifErr);
+            // No frena la respuesta de éxito al usuario
+        }
 
         return res.json({ success: true, message: 'Publicación guardada en la colección' });
     } catch (error) {

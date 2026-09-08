@@ -13,6 +13,7 @@ import { manejoDeErrores } from './middleware/errorMiddleware.js';
 import messageRoutes from './routes/messageRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
 import collectionRoutes from './routes/collectionRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // CONSTANTES
 const PORT = process.env.PORT || 3000;
@@ -58,6 +59,7 @@ app.use('/', postRoutes);
 app.use('/', messageRoutes);
 app.use('/', complaintRoutes);
 app.use('/', collectionRoutes);
+app.use('/', notificationRoutes);
 
 //Manejo de errores
 app.use(manejoDeErrores);

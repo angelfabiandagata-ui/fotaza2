@@ -11,7 +11,7 @@ import { message } from './message.js';
 import { complaint_image } from './complaint_image.js';
 import { complaint_comment } from './complaint_comment.js';
 import { collectionPublication } from './collectionPublication.js';
-
+import { notification } from './notification.js';
 
 // To create a One-To-One relationship, the hasOne and belongsTo associations are used together;
 // To create a One-To-Many relationship, the hasMany and belongsTo associations are used together;
@@ -163,3 +163,16 @@ user.hasMany(complaint_comment, {
 complaint_comment.belongsTo(user, { 
     foreignKey: 'user_id', 
     as: 'denunciante' });
+
+// Un usuario recibe muchas notificaciones
+user.hasMany(notification, { 
+    foreignKey: 'user_id', 
+    as: 'notificacionesRecibidas' });
+notification.belongsTo(user, { 
+    foreignKey: 'user_id', 
+    as: 'destinatario' });
+
+// Una notificación tiene un autor
+notification.belongsTo(user, { 
+    foreignKey: 'sender_id', 
+    as: 'remitente' });

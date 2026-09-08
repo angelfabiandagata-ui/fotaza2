@@ -2,12 +2,12 @@ extends layout.pug
 
 block content
   .profile-container
-    // Cabecera del Perfil 
+    //- 1. Cabecera del Perfil 
     header.profile-header
       .profile-avatar-container
-        if userLogueado && usuario && userLogueado.id === usuario.id
+        if esMiPerfil
           label.avatar-changer(for="file-avatar-input" style="cursor: pointer; position: relative; display: block;")
-            if usuario.profile_photo 
+            if usuario && usuario.profile_photo 
               img#profile-avatar-img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
             else
               img#profile-avatar-img(src="/images/fotazaavatar.jpg", alt="Avatar por defecto", class="profile-avatar")
@@ -18,25 +18,30 @@ block content
             img(src=usuario.profile_photo, alt="Foto de perfil", class="profile-avatar")
           else
             img(src="/images/fotazaavatar.jpg", alt="Avatar por defecto", class="profile-avatar")
-      
+
       .profile-info
-        .profile-title-row
-          h2.profile-username #{usuario ? usuario.username : 'Usuario Invitado'}
-          if userLogueado && usuario && userLogueado.id === usuario.id
+        .profile-title-row(style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;")
+          h2.profile-username(style="margin: 0;") #{usuario ? usuario.username : 'Usuario'}
+
+          if esMiPerfil
             .profile-actions-group(style="display: flex; gap: 10px; align-items: center;")
-              a.btn-upload-nav(href="/post/new" style="background-color: #0095f6; color: white; font-weight: bold; text-decoration: none; padding: 5px 12px; border-radius: 4px; font-size: 0.9rem;") Nueva Publicación
-              a.btn-logout(href="/auth/logout" style="color: #ff4d4d; font-weight: bold; text-decoration: none; border: 1px solid #ff4d4d; padding: 5px 10px; border-radius: 4px; font-size: 0.9rem;") Cerrar Sesión
+              a.btn-upload-nav(href="/post/new" style="background-color: #0095f6; color: white; font-weight: bold; text-decoration: none; padding: 6px 14px; border-radius: 4px; font-size: 0.85rem;") Nueva Publicación
+              a.btn-logout(href="/auth/logout" style="color: #ff4d4d; font-weight: bold; text-decoration: none; border: 1px solid #ff4d4d; padding: 5px 12px; border-radius: 4px; font-size: 0.85rem;") Cerrar Sesión
           else if userLogueado
-            button.btn-follow Seguir
-        
-        .profile-stats
+            button#btn-follow(
+              type="button"
+              data-creator-id=usuario.id 
+              style="padding: 6px 18px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; background: " + (loSigo ? "#e0e0e0" : "#0095f6") + "; color: " + (loSigo ? "#333" : "#fff") + ";"
+            ) #{loSigo ? 'Siguiendo' : 'Seguir'}
+
+        .profile-stats(style="margin-top: 15px; display: flex; gap: 20px;")
           span #[strong #{publicaciones ? publicaciones.length : 0}] publicaciones
-          span #[strong #{seguidoresCount || 0}] seguidores
+          span #[strong#contador-seguidores #{seguidoresCount || 0}] seguidores
           span #[strong #{seguidosCount || 0}] seguidos
 
     hr.profile-divider
 
-    //- 2. Grilla de Publicaciones (Mosaico Cronológico)
+    //- 2. Grilla de Publicaciones
     section.profile-gallery
       if publicaciones && publicaciones.length > 0
         .gallery-grid
@@ -51,15 +56,16 @@ block content
       else
         .gallery-empty
           p Sin publicaciones
-          if userLogueado && usuario && userLogueado.id === usuario.id
+          if esMiPerfil
             a.btn-upload(href="/post/new") Subir mi primera foto
 
-    //- 3. Sección de Colecciones (fuera de la galería de fotos)
+    //- 3. Sección de Colecciones
     section.seccion-colecciones(style="margin-top: 35px;")
-      h3(style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px;") 📁 Mis Colecciones
+      h3(style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px;") 
+        | #{esMiPerfil ? '📁 Mis Colecciones' : '📁 Colecciones'}
 
       if !colecciones || colecciones.length === 0
-        p(style="color: #777; font-size: 0.9rem;") Aún no has creado ninguna colección
+        p(style="color: #777; font-size: 0.9rem;") #{esMiPerfil ? 'Aún no has creado ninguna colección' : 'Este usuario no tiene colecciones públicas'}
       else
         .grid-colecciones(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;")
           each col in colecciones
@@ -72,85 +78,134 @@ block content
               div(style="padding: 10px;")
                 h4(style="margin: 0 0 5px 0; font-size: 1rem; color: #333;") #{col.title}
                 span(style="font-size: 0.75rem; color: #666; display: block; margin-bottom: 8px;")
-                  | #{col.publications ? col.publications.length : 0} publicaciones | #{col.public ? 'Pública' : '🔒 Privada'}
+                  | #{col.publications ? col.publications.length : 0} publicaciones #{esMiPerfil ? (col.public ? '| Pública' : '| 🔒 Privada') : ''}
                 a(href=`/colecciones/${col.id}` style="display: inline-block; font-size: 0.8rem; color: #007bff; text-decoration: none; font-weight: bold;") Ver contenido →
 
-    //- 4. Sección: Publicaciones de cuentas que sigues
-    section.seccion-seguidos(style="margin-top: 40px;")
-      h3(style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px;") 👥 Publicaciones de personas que sigues
+    //- 4. Sección: Publicaciones de cuentas que sigues (Sólo visible en el perfil propio)
+    if esMiPerfil
+      section.seccion-seguidos(style="margin-top: 40px;")
+        h3(style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px;") 👥 Publicaciones de personas que sigues
 
-      if !publicacionesSeguidos || publicacionesSeguidos.length === 0
-        p(style="color: #777; font-size: 0.9rem; margin-top: 10px;")
-          | No hay publicaciones recientes de usuarios que sigues o aún no sigues a nadie
-          |  #[a(href="/" style="color: #007bff; text-decoration: none; font-weight: bold;") ¡Explora la comunidad!]
-      else
-        .grid-seguidos(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; margin-top: 15px;")
-          each post in publicacionesSeguidos
-            .card-post-seguido(style="border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;")
-              
-              //- Header de la tarjeta con usuario y avatar
-              .card-user-header(style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #f0f0f0;")
-                img(
-                  src=(post.usuarioCreador && post.usuarioCreador.profile_photo) ? post.usuarioCreador.profile_photo : '/images/fotazaavatar.jpg' 
-                  style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;"
+        if !publicacionesSeguidos || publicacionesSeguidos.length === 0
+          p(style="color: #777; font-size: 0.9rem; margin-top: 10px;")
+            | No hay publicaciones recientes de usuarios que sigues o aún no sigues a nadie.
+            |  #[a(href="/" style="color: #007bff; text-decoration: none; font-weight: bold;") ¡Explora la comunidad!]
+        else
+          .grid-seguidos(style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; margin-top: 15px;")
+            each post in publicacionesSeguidos
+              .card-post-seguido(style="border: 1px solid #e1e4e8; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column;")
+                
+                //- Header con enlace al perfil del creador
+                a.card-user-header(
+                  href=`/perfil/${post.usuarioCreador ? post.usuarioCreador.id : '#'}` 
+                  style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-decoration: none;"
                 )
-                span(style="font-size: 0.85rem; font-weight: 600; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;")
-                  | #{post.usuarioCreador ? post.usuarioCreador.username : 'Usuario'}
+                  img(
+                    src=(post.usuarioCreador && post.usuarioCreador.profile_photo) ? post.usuarioCreador.profile_photo : '/images/fotazaavatar.jpg' 
+                    style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;"
+                  )
+                  span(style="font-size: 0.85rem; font-weight: 600; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;")
+                    | #{post.usuarioCreador ? post.usuarioCreador.username : 'Usuario'}
 
-              //- Imagen de la publicación
-              a(href=`/post/show/${post.id}` style="display: block; width: 100%; height: 160px; background: #f8f9fa;")
-                if post.images && post.images.length > 0
-                  img(src=post.images[0].url alt=post.title style="width: 100%; height: 100%; object-fit: cover; display: block;")
-                else
-                  img(src="/images/default-placeholder.png" alt="Sin imagen" style="width: 100%; height: 100%; object-fit: cover; display: block;")
+                //- Imagen
+                a(href=`/post/show/${post.id}` style="display: block; width: 100%; height: 160px; background: #f8f9fa;")
+                  if post.images && post.images.length > 0
+                    img(src=post.images[0].url alt=post.title style="width: 100%; height: 100%; object-fit: cover; display: block;")
+                  else
+                    img(src="/images/default-placeholder.png" alt="Sin imagen" style="width: 100%; height: 100%; object-fit: cover; display: block;")
 
-              //- Título o pie de foto
-              if post.title
-                div(style="padding: 8px 10px; font-size: 0.8rem; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;")
-                  | #{post.title}
+                if post.title
+                  div(style="padding: 8px 10px; font-size: 0.8rem; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;")
+                    | #{post.title}
 
   script.
+    // 1. Manejo de Avatar
     const fileInput = document.querySelector('#file-avatar-input');
     const avatarImg = document.querySelector('#profile-avatar-img');
     
     if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onloadend = async () => {
-                    const base64String = reader.result;
-                    try {
-                        const response = await fetch('/perfil/cambiar-avatar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ avatar: base64String })
-                        });
-                        const data = await response.json();
-                        if (data.success) {
-                            avatarImg.src = base64String;
-                            crearToast("¡Foto de perfil actualizada!", "success");
-                        } else {
-                            crearToast("Hubo un error al guardar la foto.", "error");
-                        }
-                    } catch (error) {
-                        console.error("Error en la peticion asíncrona:", error);
-                        crearToast("Error de conexión al actualizar la foto", "error");
-                    }
-                };
-                reader.readAsDataURL(file);
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64String = reader.result;
+            try {
+              const response = await fetch('/perfil/cambiar-avatar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ avatar: base64String })
+              });
+              const data = await response.json();
+              if (data.success) {
+                avatarImg.src = base64String;
+                crearToast("¡Foto de perfil actualizada!", "success");
+              } else {
+                crearToast("Hubo un error al guardar la foto.", "error");
+              }
+            } catch (error) {
+              console.error("Error en la petición asíncrona:", error);
+              crearToast("Error de conexión al actualizar la foto", "error");
             }
-        });
+          };
+          reader.readAsDataURL(file);
+        }
+      });
     }
+
+    // 2. Manejo de Seguir / Dejar de seguir (Follow asíncrono)
+    const btnFollow = document.querySelector('#btn-follow');
+    const contadorSeguidores = document.querySelector('#contador-seguidores');
+
+    if (btnFollow) {
+      btnFollow.addEventListener('click', async () => {
+        const creatorId = btnFollow.getAttribute('data-creator-id');
+        try {
+          // Ajustá '/usuarios/toggle-seguir' según la ruta que tengas configurada para toggleSeguirUsuario
+          const res = await fetch('/usuarios/toggle-seguir', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ creatorId })
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            if (data.siguiendo) {
+              btnFollow.innerText = 'Siguiendo';
+              btnFollow.style.background = '#e0e0e0';
+              btnFollow.style.color = '#333';
+              if (contadorSeguidores) {
+                contadorSeguidores.innerText = parseInt(contadorSeguidores.innerText) + 1;
+              }
+              crearToast("Ahora sigues a este usuario", "success");
+            } else {
+              btnFollow.innerText = 'Seguir';
+              btnFollow.style.background = '#0095f6';
+              btnFollow.style.color = '#fff';
+              if (contadorSeguidores) {
+                const count = parseInt(contadorSeguidores.innerText) - 1;
+                contadorSeguidores.innerText = count >= 0 ? count : 0;
+              }
+              crearToast("Has dejado de seguir a este usuario", "info");
+            }
+          } else {
+            crearToast(data.message || "No se pudo actualizar el seguimiento", "error");
+          }
+        } catch (err) {
+          console.error("Error al seguir/dejar de seguir:", err);
+          crearToast("Error al conectar con el servidor", "error");
+        }
+      });
+    }
+
     function crearToast(mensaje, tipo = "success") {
-        const toast = document.createElement("div");
-        toast.classList.add("toast-flotante", tipo);
-        toast.innerText = mensaje;
+      const toast = document.createElement("div");
+      toast.classList.add("toast-flotante", tipo);
+      toast.innerText = mensaje;
+      document.body.appendChild(toast);
 
-        document.body.appendChild(toast);
-
-        setTimeout(() => {
-            toast.classList.add("fade-out");
-            toast.addEventListener("transitionend", () => toast.remove());
-        }, 3000);
+      setTimeout(() => {
+        toast.classList.add("fade-out");
+        toast.addEventListener("transitionend", () => toast.remove());
+      }, 3000);
     }

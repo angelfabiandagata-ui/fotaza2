@@ -16,10 +16,37 @@ mixin nav(userLogueado)
         if userLogueado
           li
             a.navbar-item(href='/perfil') Mi Perfil
+
+          //- Campana de Notificaciones con su Dropdown
+          li(style="position: relative; display: flex; align-items: center;")
+            button#btn-campana(
+              type="button" 
+              style="background: none; border: none; font-size: 1.25rem; cursor: pointer; position: relative; padding: 6px 10px; outline: none; line-height: 1;"
+              title="Notificaciones"
+            ) 🔔
+              span#notif-badge(
+                style="display: none; position: absolute; top: 0; right: 2px; background: #dc3545; color: white; border-radius: 50%; font-size: 0.65rem; font-weight: bold; padding: 2px 5px; min-width: 15px; text-align: center;"
+              ) 0
+
+            //- Menú flotante
+            #notif-dropdown(
+              style="display: none; position: absolute; right: 0; top: 42px; width: 320px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); z-index: 1000; overflow: hidden; text-align: left;"
+            )
+              .notif-header(style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #f8f9fa; border-bottom: 1px solid #eee;")
+                span(style="font-weight: bold; font-size: 0.85rem; color: #333;") Notificaciones
+                button#btn-marcar-todas(
+                  type="button" 
+                  style="background: none; border: none; color: #007bff; font-size: 0.75rem; cursor: pointer; text-decoration: underline;"
+                ) Marcar leídas
+
+              #notif-lista(style="max-height: 340px; overflow-y: auto;")
+                p#notif-cargando(style="text-align: center; color: #888; font-size: 0.85rem; padding: 15px; margin: 0;") Cargando...
+
+          li
+            a.navbar-item(href='/mensajes') Mensajes
+
           li
             a.navbar-item.btn-logout-nav(href='/auth/logout') Salir
-          li
-            a.navbar-item(href='/mensajes') Mensajes  
         else
           li
             a.navbar-item(href='/auth/login') Login

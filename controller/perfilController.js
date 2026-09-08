@@ -84,7 +84,8 @@ export const mostrarPerfil = async (req, res) => {
             colecciones: coleccionesLimpias,
             publicacionesSeguidos: feedSeguidosLimpio,
             seguidoresCount: cantSeguidores, 
-            seguidosCount: cantSeguidos
+            seguidosCount: cantSeguidos,
+            esMiPerfil: true
         });
 
     } catch (error) {
@@ -132,5 +133,72 @@ export const cambiarAvatarAsincronico = async (req, res) => {
     } catch (error) {
         console.error("Error en cambiarAvatarAsincronico:", error);
         return res.status(500).json({ success: false, message: "Error interno del servidor" });
+    }
+};
+
+//Ver otros perfiles
+export const verPerfilPorId = async (req, res) => {
+    try {
+        const perfilId = parseInt(req.params.id);
+        const currentUserId = req.session && req.session.user ? req.session.user.id : null;
+
+        // Si el usuario hace clic en su propio perfil por ID, lo redirigimos a /perfil
+        if (currentUserId && perfilId === currentUserId) {
+            return res.redirect('/perfil');
+        }
+
+        // 1. Buscar al usuario del perfil
+        const usuarioEncontrado = await user.findByPk(perfilId, {
+            attributes: ['id', 'username', 'email', 'profile_photo', 'role']
+        });
+
+        if (!usuarioEncontrado) {
+            return res.status(404).render('error', { message: "Usuario no encontrado" });
+        }
+
+        // 2. Sus fotos públicas activas
+        const fotos = await publication.findAll({
+            where: { user_id: perfilId, state: true },
+            order: [['createdAt', 'DESC']],
+            include: [{ model: image, as: 'images' }]
+        });
+
+        // 3. Sus colecciones que sean PÚBLICAS
+        const colecciones = await collection.findAll({
+            where: { user_id: perfilId, public: true },
+            order: [['createdAt', 'DESC']],
+            include: [{
+                model: publication,
+                include: [{ model: image, as: 'images' }]
+            }]
+        });
+
+        // 4. Contadores
+        const cantSeguidores = await follower.count({ where: { followed_id: perfilId } });
+        const cantSeguidos = await follower.count({ where: { follower_id: perfilId } });
+
+        // 5. Saber si el usuario logueado ya sigue a este perfil
+        let loSigo = false;
+        if (currentUserId) {
+            const existeFollow = await follower.findOne({
+                where: { follower_id: currentUserId, followed_id: perfilId }
+            });
+            loSigo = !!existeFollow;
+        }
+
+        return res.render("perfil", {
+            usuario: usuarioEncontrado.get({ plain: true }),
+            userLogueado: req.session ? req.session.user : null,
+            publicaciones: fotos.map(f => f.get({ plain: true })),
+            colecciones: colecciones.map(c => c.get({ plain: true })),
+            seguidoresCount: cantSeguidores,
+            seguidosCount: cantSeguidos,
+            esMiPerfil: false, 
+            loSigo: loSigo      // Para pintar el botón Seguir / Dejar de seguir
+        });
+
+    } catch (error) {
+        console.error("Error al ver perfil por ID:", error);
+        return res.status(500).send("Error del servidor");
     }
 };

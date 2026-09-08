@@ -1,8 +1,7 @@
-include mixins/nav.pug 
-
+include mixins/nav.pug
 
 doctype html
-html
+html(lang="es")
   head
     meta(charset='UTF-8')
     meta(name='viewport', content='width=device-width, initial-scale=1.0')
@@ -11,8 +10,122 @@ html
 
   body
     +nav(userLogueado)
+
     main
       div(style="padding: 20px")
-        link(rel="stylesheet", href="/styles.css")
         block content
 
+    //- Script global para el manejo de notificaciones (Campana, Dropdown y Polling)
+    if userLogueado
+      script.
+        document.addEventListener('DOMContentLoaded', () => {
+          const btnCampana = document.querySelector('#btn-campana');
+          const dropdown = document.querySelector('#notif-dropdown');
+          const badge = document.querySelector('#notif-badge');
+          const lista = document.querySelector('#notif-lista');
+          const btnMarcarTodas = document.querySelector('#btn-marcar-todas');
+
+          // Si en la vista actual no está renderizado el botón de campana, termina
+          if (!btnCampana || !dropdown) return;
+
+          // 1. Obtener notificaciones del servidor
+          async function cargarNotificaciones() {
+            try {
+              const res = await fetch('/notificaciones');
+              const data = await res.json();
+
+              if (data.success) {
+                actualizarBadge(data.noLeidas);
+                renderizarLista(data.notificaciones);
+              }
+            } catch (err) {
+              console.error('Error al cargar notificaciones:', err);
+            }
+          }
+
+          function actualizarBadge(cantidad) {
+            if (!badge) return;
+            if (cantidad > 0) {
+              badge.innerText = cantidad > 99 ? '99+' : cantidad;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+
+          function renderizarLista(items) {
+            if (!lista) return;
+            if (!items || items.length === 0) {
+              lista.innerHTML = '<p style="text-align: center; color: #888; font-size: 0.85rem; padding: 20px 10px; margin: 0;">No tienes notificaciones pendientes.</p>';
+              return;
+            }
+
+            lista.innerHTML = items.map(item => {
+              const bgNoLeida = !item.is_read ? 'background: #f0f7ff;' : 'background: #fff;';
+              const avatar = (item.remitente && item.remitente.profile_photo) 
+                ? item.remitente.profile_photo 
+                : '/images/fotazaavatar.jpg';
+              const link = item.url || '#';
+
+              return `
+                <a href="${link}" class="notif-item" data-id="${item.id}" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #f2f2f2; text-decoration: none; color: inherit; transition: background 0.2s; ${bgNoLeida}">
+                  <img src="${avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
+                  <div style="flex-grow: 1; font-size: 0.82rem; line-height: 1.3;">
+                    <div style="color: #333;">${item.message}</div>
+                    <span style="font-size: 0.7rem; color: #999;">${new Date(item.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </a>
+              `;
+            }).join('');
+          }
+
+          // 2. Abrir / Cerrar dropdown al pulsar la campana
+          btnCampana.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const visible = dropdown.style.display === 'block';
+            dropdown.style.display = visible ? 'none' : 'block';
+          });
+
+          // Cerrar dropdown al hacer clic afuera
+          document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target) && e.target !== btnCampana) {
+              dropdown.style.display = 'none';
+            }
+          });
+
+          // 3. Marcar una notificación como leída al hacer clic sobre ella
+          lista.addEventListener('click', async (e) => {
+            const item = e.target.closest('.notif-item');
+            if (!item) return;
+
+            const notifId = item.getAttribute('data-id');
+            try {
+              await fetch(`/notificaciones/marcar/${notifId}`, { method: 'POST' });
+            } catch (err) {
+              console.error('Error al marcar notificación individual:', err);
+            }
+          });
+
+          // 4. Marcar todas como leídas
+          if (btnMarcarTodas) {
+            btnMarcarTodas.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              try {
+                const res = await fetch('/notificaciones/marcar/todas', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                  actualizarBadge(0);
+                  document.querySelectorAll('.notif-item').forEach(el => {
+                    el.style.background = '#fff';
+                  });
+                }
+              } catch (err) {
+                console.error('Error al marcar todas las notificaciones:', err);
+              }
+            });
+          }
+
+          // Ejecución inicial y sondeo periódico cada 45 segundos
+          cargarNotificaciones();
+          setInterval(cargarNotificaciones, 45000);
+        });

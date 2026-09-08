@@ -7,7 +7,7 @@ import {
     valorarFoto, 
     explorarContenido,
     toggleSeguirUsuario,
-    toggleComentarios,
+    toggleComentarios
 } from '../controller/postController.js';
 
 import { requerirAutenticacion } from '../middleware/authMiddleware.js';
@@ -24,7 +24,6 @@ router.post('/post/new', requerirAutenticacion, crearPublicacion);
 
 // Visualización del detalle del carrusel 
 router.get('/post/show/:id', verDetallePublicacion);
-
 
 
 // INTERACCIONES ASÍNCRONAS 
